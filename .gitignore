@@ -6,4 +6,5 @@ __pycache__/
 lightning_logs*
 
 dataset/
+dataset-jpg/
 notebook/
