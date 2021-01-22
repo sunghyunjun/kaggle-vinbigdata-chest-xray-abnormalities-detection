@@ -1,0 +1,246 @@
+import os
+
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
+
+from sklearn.model_selection import StratifiedKFold
+import pytorch_lightning as pl
+
+import torch
+from torch.utils.data import DataLoader, Subset
+
+from dataset import XrayFindingDataset, XrayDetectionDataset
+
+
+class XrayFindingDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        fold_splits=10,
+        fold_index=0,
+        batch_size=32,
+        num_workers=2,
+    ):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.fold_splits = fold_splits
+        self.fold_index = fold_index
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def setup(self, stage=None):
+        self.train_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+
+        self.train_df = self.train_dataset.train_df
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+    def train_dataloader(self):
+        train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+        return train_loader
+
+    def val_dataloader(self):
+        valid_loader = DataLoader(
+            self.valid_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+        return valid_loader
+
+    def get_train_transform(self):
+        return A.Compose(
+            [
+                A.OneOf(
+                    [
+                        A.RandomBrightnessContrast(p=0.5),
+                        A.RGBShift(p=0.5),
+                        A.HueSaturationValue(p=0.5),
+                        A.ToGray(p=0.5),
+                        A.ChannelDropout(p=0.5),
+                        A.ChannelShuffle(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.OneOf(
+                    [
+                        A.Blur(p=0.5),
+                        A.GaussNoise(p=0.5),
+                        A.IAASharpen(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.OneOf(
+                    [
+                        # A.Rotate(limit=20, p=0.5),
+                        A.HorizontalFlip(p=0.5),
+                        # A.VerticalFlip(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.Resize(height=512, width=512),
+                A.Normalize(),
+                ToTensorV2(),
+            ]
+        )
+
+    def get_valid_transform(self):
+        return A.Compose(
+            [
+                A.Resize(height=512, width=512),
+                A.Normalize(),
+                ToTensorV2(),
+            ]
+        )
+
+    def make_fold_index(self, n_splits=10, fold_index=0):
+        skf = StratifiedKFold(n_splits=n_splits)
+        train_fold = []
+        valid_fold = []
+        for train_index, valid_index in skf.split(
+            self.train_df.image_id, self.train_df.label
+        ):
+            train_fold.append(train_index)
+            valid_fold.append(valid_index)
+
+        return train_fold[fold_index], valid_fold[fold_index]
+
+
+class XrayDetectionDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        fold_splits=10,
+        fold_index=0,
+        batch_size=32,
+        num_workers=2,
+    ):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.fold_splits = fold_splits
+        self.fold_index = fold_index
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_dataset = XrayDetectionDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+    def train_dataloader(self):
+        train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            collate_fn=self.make_batch,
+        )
+        return train_loader
+
+    def val_dataloader(self):
+        valid_loader = DataLoader(
+            self.valid_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            collate_fn=self.make_batch,
+        )
+        return valid_loader
+
+    def get_train_transform(self):
+        return A.Compose(
+            [
+                A.OneOf(
+                    [
+                        A.RandomBrightnessContrast(p=0.5),
+                        A.RGBShift(p=0.5),
+                        A.HueSaturationValue(p=0.5),
+                        A.ToGray(p=0.5),
+                        A.ChannelDropout(p=0.5),
+                        A.ChannelShuffle(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.OneOf(
+                    [
+                        A.Blur(p=0.5),
+                        A.GaussNoise(p=0.5),
+                        A.IAASharpen(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.OneOf(
+                    [
+                        # A.Rotate(limit=20, p=0.5),
+                        A.HorizontalFlip(p=0.5),
+                        # A.VerticalFlip(p=0.5),
+                    ],
+                    p=0.5,
+                ),
+                A.Resize(height=512, width=512),
+                A.Normalize(),
+                ToTensorV2(),
+            ]
+        )
+
+    def get_valid_transform(self):
+        return A.Compose(
+            [
+                A.Resize(height=512, width=512),
+                A.Normalize(),
+                ToTensorV2(),
+            ]
+        )
+
+    def make_fold_index(self, n_splits=10, fold_index=0):
+        skf = StratifiedKFold(n_splits=n_splits)
+        train_fold = []
+        valid_fold = []
+        for train_index, valid_index in skf.split(self.image_ids, self.most_class_ids):
+            train_fold.append(train_index)
+            valid_fold.append(valid_index)
+
+        return train_fold[fold_index], valid_fold[fold_index]
+
+    def make_batch(self, samples):
+        image = torch.stack([sample["image"] for sample in samples])
+        bboxes = [sample["bboxes"] for sample in samples]
+        labels = [sample["labels"] for sample in samples]
+        image_id = [sample["image_id"] for sample in samples]
+
+        return {
+            "image": image,
+            "bboxes": bboxes,
+            "labels": labels,
+            "image_id": image_id,
+        }
