@@ -30,16 +30,17 @@ unzip vinbigdata-chest-xray-abnormalities-detection.zip -d dataset
 
 Create 3x-downsampled dataset. It will be saved to "dataset-jpg" folder. It takes some hours.
 
-[kaggle_downsampled_dataset_link]: https://www.kaggle.com/raddar/vinbigdata-competition-jpg-data-3x-downsampled
-
 ```bash
 python prepare_data.py --dataset_dir=dataset
 ```
 
 ### Option 2. - Download kaggle public dataset already made
 
-Alternatively, you can use kaggle public dataset - [VinBigData competition JPG data 3x downsampled][kaggle_downsampled_dataset_link]
+Alternatively, you can use kaggle public dataset - [VinBigData Competition 3x downsampled jpg][kaggle_downsampled_dataset_link]
+
+[kaggle_downsampled_dataset_link]: https://www.kaggle.com/sunghyunjun/vinbigdata-competition-3x-downsampled-jpg
 
 ```bash
-kaggle datasets download -d raddar/vinbigdata-competition-jpg-data-3x-downsampled
+kaggle datasets download -d vinbigdata-competition-3x-downsampled-jpg
+unzip vinbigdata-competition-3x-downsampled-jpg.zip -d dataset-jpg
 ```
