@@ -8,3 +8,5 @@ lightning_logs*
 dataset/
 dataset-jpg/
 notebook/
+
+dataset-jpg.zip
