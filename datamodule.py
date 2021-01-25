@@ -20,6 +20,7 @@ class XrayFindingDataModule(pl.LightningDataModule):
         fold_index=0,
         batch_size=32,
         num_workers=2,
+        image_size=512,
     ):
         super().__init__()
         self.dataset_dir = dataset_dir
@@ -27,6 +28,8 @@ class XrayFindingDataModule(pl.LightningDataModule):
         self.fold_index = fold_index
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.resize_height = image_size
+        self.resize_width = image_size
 
     def setup(self, stage=None):
         self.train_dataset = XrayFindingDataset(
@@ -94,7 +97,7 @@ class XrayFindingDataModule(pl.LightningDataModule):
                     ],
                     p=0.5,
                 ),
-                A.Resize(height=512, width=512),
+                A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
             ]
@@ -103,7 +106,7 @@ class XrayFindingDataModule(pl.LightningDataModule):
     def get_valid_transform(self):
         return A.Compose(
             [
-                A.Resize(height=512, width=512),
+                A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
             ]
@@ -130,6 +133,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
         fold_index=0,
         batch_size=32,
         num_workers=2,
+        image_size=512,
     ):
         super().__init__()
         self.dataset_dir = dataset_dir
@@ -137,6 +141,8 @@ class XrayDetectionDataModule(pl.LightningDataModule):
         self.fold_index = fold_index
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.resize_height = image_size
+        self.resize_width = image_size
 
     def setup(self, stage=None):
         self.train_dataset = XrayDetectionDataset(
@@ -207,7 +213,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                     ],
                     p=0.5,
                 ),
-                A.Resize(height=512, width=512),
+                A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
             ]
@@ -216,7 +222,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
     def get_valid_transform(self):
         return A.Compose(
             [
-                A.Resize(height=512, width=512),
+                A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
             ]
