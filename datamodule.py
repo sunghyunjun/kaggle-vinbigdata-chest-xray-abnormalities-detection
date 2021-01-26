@@ -216,7 +216,13 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                 A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
-            ]
+            ],
+            bbox_params=A.BboxParams(
+                format="pascal_voc",
+                min_area=0,
+                min_visibility=0,
+                label_fields=["labels"],
+            ),
         )
 
     def get_valid_transform(self):
@@ -225,7 +231,13 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                 A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
-            ]
+            ],
+            bbox_params=A.BboxParams(
+                format="pascal_voc",
+                min_area=0,
+                min_visibility=0,
+                label_fields=["labels"],
+            ),
         )
 
     def make_fold_index(self, n_splits=10, fold_index=0):
