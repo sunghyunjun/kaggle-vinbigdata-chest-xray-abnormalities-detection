@@ -87,9 +87,8 @@ class XrayDetectionDataset(Dataset):
                     labels=data["labels"],
                     image_id=data["image_id"],
                 )
-
-            sample["bboxes"] = torch.as_tensor(sample["bboxes"])
-            sample["labels"] = torch.as_tensor(sample["labels"])
+            sample["bboxes"] = torch.as_tensor(sample["bboxes"], dtype=torch.float32)
+            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.float32)
         else:
             sample = A.Compose([A.Normalize(), ToTensorV2()])(
                 image=data["image"],
@@ -98,8 +97,8 @@ class XrayDetectionDataset(Dataset):
                 image_id=data["image_id"],
             )
 
-            sample["bboxes"] = torch.as_tensor(sample["bboxes"])
-            sample["labels"] = torch.as_tensor(sample["labels"])
+            sample["bboxes"] = torch.as_tensor(sample["bboxes"], dtype=torch.float32)
+            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.float32)
 
         if self.bboxes_yxyx:
             # yxyx: for efficientdet training
@@ -139,7 +138,13 @@ class XrayDetectionDataset(Dataset):
         )
         self.train_df.reset_index(drop=True, inplace=True)
         self.train_df = self.train_df.astype(
-            {"x_min": "int64", "y_min": "int64", "x_max": "int64", "y_max": "int64"}
+            {
+                "class_id": "float32",
+                "x_min": "float32",
+                "y_min": "float32",
+                "x_max": "float32",
+                "y_max": "float32",
+            }
         )
 
         self.image_ids = self.train_df.image_id.unique()
@@ -159,6 +164,6 @@ class XrayDetectionDataset(Dataset):
 
         self.most_class_ids = []
         for image_id in self.image_ids:
-            class_ids = self.train_data[image_id][:, 0]
+            class_ids = self.train_data[image_id][:, 0].astype(np.int64)
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
