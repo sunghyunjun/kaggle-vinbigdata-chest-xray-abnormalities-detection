@@ -34,8 +34,8 @@ class XrayClassifier(pl.LightningModule):
 
         self.train_acc = pl.metrics.Accuracy()
         self.valid_acc = pl.metrics.Accuracy()
-        self.train_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
-        self.valid_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
+        # self.train_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
+        # self.valid_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
 
         self.save_hyperparameters()
 
@@ -47,28 +47,35 @@ class XrayClassifier(pl.LightningModule):
         image, target = batch
         output = self.model(image)
         pred = F.sigmoid(output)
-        loss = F.binary_cross_entropy_with_logits(output, target)
+
+        pred = torch.squeeze(pred)
+        target = target.double()
+
+        loss = F.binary_cross_entropy_with_logits(pred, target)
         self.log("train_loss", loss)
         self.log("train_acc_step", self.train_acc(pred, target))
-        self.log("train_confmat_step", self.train_confmat(pred, target))
+        # self.log("train_confmat_step", self.train_confmat(pred, target))
         return loss
 
     def training_epoch_end(self, training_step_outputs):
         self.log("train_acc_epoch", self.train_acc.compute())
-        self.log("train_confmat_epoch", self.train_confmat.compute())
+        # self.log("train_confmat_epoch", self.train_confmat.compute())
 
     def validation_step(self, batch, batch_idx):
         image, target = batch
         output = self.model(image)
         pred = F.sigmoid(output)
-        loss = F.binary_cross_entropy_with_logits(output, target)
+
+        pred = torch.squeeze(pred)
+        target = target.double()
+
+        loss = F.binary_cross_entropy_with_logits(pred, target)
         self.log("val_loss", loss)
         self.log("val_acc_step", self.valid_acc(pred, target))
         return loss
 
     def validation_epoch_end(self, validation_step_outputs):
         self.log("val_acc_epoch", self.valid_acc.compute())
-        self.log("val_confmat_epoch", self.valid_confmat.compute())
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(
@@ -86,7 +93,7 @@ class XrayClassifier(pl.LightningModule):
             model = EfficientNet.from_pretrained(model_name)
 
         num_in_features = model._fc.in_features
-        model.fc = nn.Linear(num_in_features, self.num_classes)
+        model._fc = nn.Linear(num_in_features, self.num_classes)
 
         return model
 
@@ -168,7 +175,7 @@ class XrayDetector(pl.LightningModule):
 
         model = create_model_from_config(
             config=config,
-            banch_task="train",
+            bench_task="train",
             num_classes=num_classes,
             pretrained=pretrained,
             checkpoint_path="",
