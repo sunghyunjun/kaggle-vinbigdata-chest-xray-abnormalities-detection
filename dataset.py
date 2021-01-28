@@ -88,7 +88,7 @@ class XrayDetectionDataset(Dataset):
                     image_id=data["image_id"],
                 )
             sample["bboxes"] = torch.as_tensor(sample["bboxes"], dtype=torch.float32)
-            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.float32)
+            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.int64)
         else:
             sample = A.Compose([A.Normalize(), ToTensorV2()])(
                 image=data["image"],
@@ -98,7 +98,7 @@ class XrayDetectionDataset(Dataset):
             )
 
             sample["bboxes"] = torch.as_tensor(sample["bboxes"], dtype=torch.float32)
-            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.float32)
+            sample["labels"] = torch.as_tensor(sample["labels"], dtype=torch.int64)
 
         if self.bboxes_yxyx:
             # yxyx: for efficientdet training
