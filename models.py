@@ -10,6 +10,8 @@ from efficientnet_pytorch import EfficientNet
 from effdet import create_model, create_model_from_config
 from effdet.config import get_efficientdet_config
 
+from evaluator import XrayEvaluator
+
 
 class XrayClassifier(pl.LightningModule):
     def __init__(
@@ -26,9 +28,6 @@ class XrayClassifier(pl.LightningModule):
         self.init_lr = init_lr
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
-        # resolution
-        # b0: 224, b1: 240, b2: 260, b3: 300, b4: 380, b5: 456, b6: 528, b7: 600, b8: 672
-        self.image_size = EfficientNet.get_image_size(self.model_name)
         self.num_classes = 1
         self.model = self.get_model(self.model_name, self.pretrained)
 
@@ -40,13 +39,15 @@ class XrayClassifier(pl.LightningModule):
         self.save_hyperparameters()
 
     def forward(self, x):
-        target = F.sigmoid(self.model(x))
+        # target = F.sigmoid(self.model(x))
+        target = torch.sigmoid(self.model(x))
         return target
 
     def training_step(self, batch, batch_idx):
         image, target = batch
         output = self.model(image)
-        pred = F.sigmoid(output)
+        # pred = F.sigmoid(output)
+        pred = torch.sigmoid(output)
 
         pred = torch.squeeze(pred)
         target = target.double()
@@ -64,7 +65,8 @@ class XrayClassifier(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         image, target = batch
         output = self.model(image)
-        pred = F.sigmoid(output)
+        # pred = F.sigmoid(output)
+        pred = torch.sigmoid(output)
 
         pred = torch.squeeze(pred)
         target = target.double()
@@ -113,6 +115,7 @@ class XrayDetector(pl.LightningModule):
         init_lr=1e-4,
         weight_decay=1e-5,
         max_epochs=10,
+        evaluator: XrayEvaluator = None,
     ):
         super().__init__()
         self.model_name = model_name
@@ -121,7 +124,7 @@ class XrayDetector(pl.LightningModule):
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
         self.model = self.get_model(self.model_name, self.pretrained)
-        self.image_size = 512
+        self.evaluator = evaluator
 
         self.save_hyperparameters()
 
@@ -154,10 +157,22 @@ class XrayDetector(pl.LightningModule):
         class_loss = output["class_loss"]
         box_loss = output["box_loss"]
 
+        if self.evaluator:
+            detections = output["detections"]
+            targets = {}
+            targets["img_idx"] = torch.LongTensor([batch_idx])
+            targets["bbox"] = boxes
+            targets["cls"] = labels
+            self.evaluator.add_predictions(detections, targets)
+
         self.log("val_loss", loss)
         self.log("val_cls_loss", class_loss)
         self.log("val_box_loss", box_loss)
         return loss
+
+    def validation_epoch_end(self, validation_step_outputs):
+        if self.evaluator:
+            self.log("mAP", self.evaluator.evaluate())
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(
