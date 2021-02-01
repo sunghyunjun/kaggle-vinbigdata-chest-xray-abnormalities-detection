@@ -115,6 +115,7 @@ class XrayDetector(pl.LightningModule):
         init_lr=1e-4,
         weight_decay=1e-5,
         max_epochs=10,
+        anchor_scale=4,
         evaluator: XrayEvaluator = None,
     ):
         super().__init__()
@@ -123,7 +124,12 @@ class XrayDetector(pl.LightningModule):
         self.init_lr = init_lr
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
-        self.model = self.get_model(self.model_name, self.pretrained)
+        self.anchor_scale = anchor_scale
+        self.model = self.get_model(
+            model_name=self.model_name,
+            pretrained=self.pretrained,
+            anchor_scale=self.anchor_scale,
+        )
         self.evaluator = evaluator
 
         self.save_hyperparameters()
@@ -157,10 +163,30 @@ class XrayDetector(pl.LightningModule):
         class_loss = output["class_loss"]
         box_loss = output["box_loss"]
 
+        if batch_idx == 0:
+            self.initial_batch_size = len(image)
+
+        current_batch_size = len(image)
+
+        img_idx = (
+            torch.arange(0, current_batch_size, dtype=torch.int64)
+            + self.initial_batch_size * batch_idx
+        )
+
+        # print(batch_idx, img_idx)
+
         if self.evaluator:
             detections = output["detections"]
+            # print(f"before: {detections.size()}")
+
+            # test filtering score > 0.001, 0.3
+            # detections = detections[torch.where(detections[:, :, 4] > 0.3)].reshape(
+            #     batch_size, -1, 6
+            # )
+            # print(f"after: {detections.size()}")
             targets = {}
-            targets["img_idx"] = torch.LongTensor([batch_idx])
+            # targets["img_idx"] = torch.LongTensor([batch_idx])
+            targets["img_idx"] = img_idx
             targets["bbox"] = boxes
             targets["cls"] = labels
             self.evaluator.add_predictions(detections, targets)
@@ -172,7 +198,10 @@ class XrayDetector(pl.LightningModule):
 
     def validation_epoch_end(self, validation_step_outputs):
         if self.evaluator:
-            self.log("mAP", self.evaluator.evaluate())
+            # self.log("mAP", self.evaluator.evaluate())
+            metrics = self.evaluator.evaluate()
+            for key, value in metrics.items():
+                self.log(key, value)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(
@@ -183,10 +212,13 @@ class XrayDetector(pl.LightningModule):
         print(f"CosineAnnealingLR T_max epochs = {self.max_epochs}")
         return [optimizer], [scheduler]
 
-    def get_model(self, model_name="tf_efficientdet_d0", pretrained=True):
+    def get_model(
+        self, model_name="tf_efficientdet_d0", pretrained=True, anchor_scale=4
+    ):
         config = get_efficientdet_config(model_name)
         config.image_size = (512, 512)
-        num_classes = 13
+        num_classes = 14
+        config.anchor_scale = anchor_scale
 
         model = create_model_from_config(
             config=config,
