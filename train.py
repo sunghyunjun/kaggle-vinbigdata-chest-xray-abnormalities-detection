@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--fold_index", default=0, type=int)
     parser.add_argument("--max_epochs", default=10, type=int)
+    parser.add_argument("--anchor_scale", default=4, type=int)
 
     parser.add_argument("--init_lr", default=1e-4, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float)
@@ -116,6 +117,7 @@ def main():
             init_lr=args.init_lr,
             weight_decay=args.weight_decay,
             max_epochs=args.max_epochs,
+            anchor_scale=args.anchor_scale,
             evaluator=evaluator,
         )
         checkpoint_callback = ModelCheckpoint(
@@ -133,13 +135,7 @@ def main():
             api_key=os.environ["NEPTUNE_API_TOKEN"],
             project_name=args.neptune_project,
             experiment_name=args.experiment_name,
-            params={
-                "model_name": args.model_name,
-                "batch_size": args.batch_size,
-                "num_workers": args.num_workers,
-                "init_lr": args.init_lr,
-                "weight_decay": args.weight_decay,
-            },
+            params=args.__dict__,
             tags=["pytorch-lightning"],
         )
     else:
