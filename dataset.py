@@ -123,7 +123,8 @@ class XrayDetectionDataset(Dataset):
         # xyxy: x_min, y_min, x_max, y_max
         bboxes = records[:, 1:]
 
-        labels = records[:, 0]
+        # change class label 0-index 0~13 to non-zero, 1-index 1~14
+        labels = records[:, 0] + 1
 
         return image, bboxes, labels
 
