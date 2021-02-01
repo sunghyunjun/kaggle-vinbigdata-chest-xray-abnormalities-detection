@@ -36,13 +36,8 @@ class XrayEvaluator(Evaluator):
             self._evaluator.add_single_detected_image_info(img_idx, det)
 
         metrics = self._evaluator.evaluate()
-        # _logger.info('Metrics:')
-        # for k, v in metrics.items():
-        #     _logger.info(f'{k}: {v}')
-        map_metric = metrics[self._eval_metric_name]
-
         self.reset()
-        return map_metric
+        return metrics
 
     def get_categories(self):
         original_categories = [
@@ -62,7 +57,7 @@ class XrayEvaluator(Evaluator):
             {"id": 13, "name": "Pulmonary fibrosis"},
         ]
 
-        # change class label 0~13 to non-zero 1~14
+        # change class label 0-index 0~13 to non-zero, 1-index 1~14
         categories = [
             {"id": cat["id"] + 1, "name": cat["name"]} for cat in original_categories
         ]
