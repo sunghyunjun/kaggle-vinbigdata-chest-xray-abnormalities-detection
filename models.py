@@ -92,7 +92,7 @@ class XrayClassifier(pl.LightningModule):
         if pretrained:
             model = EfficientNet.from_pretrained(model_name)
         else:
-            model = EfficientNet.from_pretrained(model_name)
+            model = EfficientNet.from_name(model_name)
 
         num_in_features = model._fc.in_features
         model._fc = nn.Linear(num_in_features, self.num_classes)
