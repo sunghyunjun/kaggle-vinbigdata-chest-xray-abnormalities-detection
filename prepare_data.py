@@ -34,8 +34,9 @@ def read_xray(path, voi_lut=True, fix_monochrome=True, downscale_factor=3):
     data = data / np.max(data)
     data = (data * 255).astype(np.uint8)
 
-    new_shape = tuple([int(x / downscale_factor) for x in data.shape])
-    data = cv2.resize(data, (new_shape[1], new_shape[0]))
+    if downscale_factor != 1:
+        new_shape = tuple([int(x / downscale_factor) for x in data.shape])
+        data = cv2.resize(data, (new_shape[1], new_shape[0]))
 
     return data
 
