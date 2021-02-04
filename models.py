@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from efficientnet_pytorch import EfficientNet
 from effdet import create_model, create_model_from_config
 from effdet.config import get_efficientdet_config
+from effdet.bench import _post_process, _batch_detection
 
 from evaluator import XrayEvaluator
 
@@ -117,10 +118,12 @@ class XrayDetector(pl.LightningModule):
         max_epochs=10,
         anchor_scale=4,
         evaluator: XrayEvaluator = None,
+        pretrained_backbone=True,
     ):
         super().__init__()
         self.model_name = model_name
         self.pretrained = pretrained
+        self.pretrained_backbone = pretrained_backbone
         self.init_lr = init_lr
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
@@ -129,13 +132,34 @@ class XrayDetector(pl.LightningModule):
             model_name=self.model_name,
             pretrained=self.pretrained,
             anchor_scale=self.anchor_scale,
+            pretrained_backbone=self.pretrained_backbone,
         )
         self.evaluator = evaluator
 
         self.save_hyperparameters()
 
     def forward(self, x):
-        return self.model.forward(x)
+        # output = self.model.forward(x)
+        # return output["detections"]
+        class_out, box_out = self.model.model(x)
+        class_out, box_out, indices, classes = _post_process(
+            class_out,
+            box_out,
+            num_levels=self.model.num_levels,
+            num_classes=self.model.num_classes,
+            max_detection_points=self.model.max_detection_points,
+        )
+
+        return _batch_detection(
+            x.shape[0],
+            class_out,
+            box_out,
+            self.model.anchors.boxes,
+            indices,
+            classes,
+            max_det_per_image=self.model.max_det_per_image,
+            soft_nms=self.model.soft_nms,
+        )
 
     def training_step(self, batch, batch_idx):
         image = batch["image"]
@@ -213,7 +237,11 @@ class XrayDetector(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def get_model(
-        self, model_name="tf_efficientdet_d0", pretrained=True, anchor_scale=4
+        self,
+        model_name="tf_efficientdet_d0",
+        pretrained=True,
+        anchor_scale=4,
+        pretrained_backbone=True,
     ):
         config = get_efficientdet_config(model_name)
         config.image_size = (512, 512)
@@ -228,6 +256,7 @@ class XrayDetector(pl.LightningModule):
             checkpoint_path="",
             checkpoint_ema=False,
             bench_labeler=True,
+            pretrained_backbone=pretrained_backbone,
         )
 
         return model
