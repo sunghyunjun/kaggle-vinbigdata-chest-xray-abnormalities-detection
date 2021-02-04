@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from dataset import XrayFindingDataset, XrayDetectionDataset
+from dataset import XrayFindingDataset, XrayDetectionDataset, XrayTestDataset
 
 
 class XrayFindingDataModule(pl.LightningDataModule):
@@ -262,3 +262,47 @@ class XrayDetectionDataModule(pl.LightningDataModule):
             "labels": labels,
             "image_id": image_id,
         }
+
+
+class XrayTestDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        image_ids=None,
+        batch_size=32,
+        num_workers=2,
+        image_size=512,
+    ):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.image_ids = image_ids
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.resize_height = image_size
+        self.resize_width = image_size
+
+    def setup(self, stage=None):
+        self.test_dataset = XrayTestDataset(
+            dataset_dir=self.dataset_dir,
+            image_ids=self.image_ids,
+            transform=self.get_test_transform(),
+        )
+
+    def test_dataloader(self):
+        test_loader = DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+        return test_loader
+
+    def get_test_transform(self):
+        return A.Compose(
+            [
+                A.Resize(height=self.resize_height, width=self.resize_width),
+                A.Normalize(),
+                ToTensorV2(),
+            ]
+        )
