@@ -13,6 +13,8 @@ from torch.utils.data import Dataset
 
 from tqdm import tqdm
 
+from prepare_data import read_xray
+
 
 class XrayFindingDataset(Dataset):
     def __init__(self, dataset_dir="dataset-jpg", transform=None):
@@ -168,3 +170,37 @@ class XrayDetectionDataset(Dataset):
             class_ids = self.train_data[image_id][:, 0].astype(np.int64)
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
+
+
+class XrayTestDataset(Dataset):
+    def __init__(self, dataset_dir="dataset", image_ids=None, transform=None):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.testset_dir = os.path.join(self.dataset_dir, "test")
+        self.transform = transform
+        if image_ids is not None:
+            self.image_ids = image_ids
+        else:
+            self.image_ids = os.listdir(self.testset_dir)
+
+    # def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int):  # -> Tuple[torch.Tensor, str]:
+        image_id = self.image_ids[index]
+        image_path = os.path.join(self.testset_dir, image_id)
+
+        image = read_xray(image_path, downscale_factor=3)
+        # image = cv2.imread(image_path)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        height, width, _ = image.shape
+
+        if self.transform is not None:
+            image = self.transform(image=image)["image"]
+        else:
+            image = A.Compose([A.Normalize(), ToTensorV2()])(image=image)["image"]
+
+        return image, image_id, height, width
+
+    def __len__(self) -> int:
+        return len(self.image_ids)
