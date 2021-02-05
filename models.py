@@ -34,20 +34,20 @@ class XrayClassifier(pl.LightningModule):
 
         self.train_acc = pl.metrics.Accuracy()
         self.valid_acc = pl.metrics.Accuracy()
-        # self.train_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
-        # self.valid_confmat = pl.metrics.ConfusionMatrix(num_classes=2)
+
+        self.valid_precision = pl.metrics.Precision()
+        self.valid_recall = pl.metrics.Recall()
+        self.valid_roc = pl.metrics.ROC()
 
         self.save_hyperparameters()
 
     def forward(self, x):
-        # target = F.sigmoid(self.model(x))
         target = torch.sigmoid(self.model(x))
         return target
 
     def training_step(self, batch, batch_idx):
         image, target = batch
         output = self.model(image)
-        # pred = F.sigmoid(output)
         pred = torch.sigmoid(output)
 
         pred = torch.squeeze(pred)
@@ -56,29 +56,49 @@ class XrayClassifier(pl.LightningModule):
         loss = F.binary_cross_entropy_with_logits(pred, target)
         self.log("train_loss", loss)
         self.log("train_acc_step", self.train_acc(pred, target))
-        # self.log("train_confmat_step", self.train_confmat(pred, target))
         return loss
 
     def training_epoch_end(self, training_step_outputs):
         self.log("train_acc_epoch", self.train_acc.compute())
-        # self.log("train_confmat_epoch", self.train_confmat.compute())
 
     def validation_step(self, batch, batch_idx):
         image, target = batch
         output = self.model(image)
-        # pred = F.sigmoid(output)
         pred = torch.sigmoid(output)
 
         pred = torch.squeeze(pred)
-        target = target.double()
+        target = target.float()
 
         loss = F.binary_cross_entropy_with_logits(pred, target)
         self.log("val_loss", loss)
         self.log("val_acc_step", self.valid_acc(pred, target))
-        return loss
+        # return loss
+        return {"pred": pred, "target": target}
 
     def validation_epoch_end(self, validation_step_outputs):
+        preds = None
+        targets = None
+        for out in validation_step_outputs:
+            if preds is None:
+                preds = out["pred"]
+            else:
+                preds = torch.cat([preds, out["pred"]], dim=0)
+
+            if targets is None:
+                targets = out["target"]
+            else:
+                targets = torch.cat([targets, out["target"]], dim=0)
+
+        precision = self.valid_precision(preds, targets)
+        recall = self.valid_recall(preds, targets)
+
+        fpr, tpr, thresholds = self.valid_roc(preds, targets)
+        auc = pl.metrics.functional.classification.auc(fpr, tpr)
+
         self.log("val_acc_epoch", self.valid_acc.compute())
+        self.log("val_precision", precision)
+        self.log("val_recall", recall)
+        self.log("val_auc", auc)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(
@@ -119,6 +139,7 @@ class XrayDetector(pl.LightningModule):
         anchor_scale=4,
         evaluator: XrayEvaluator = None,
         pretrained_backbone=True,
+        image_size=512,
     ):
         super().__init__()
         self.model_name = model_name
@@ -128,11 +149,13 @@ class XrayDetector(pl.LightningModule):
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
         self.anchor_scale = anchor_scale
+        self.image_size = image_size
         self.model = self.get_model(
             model_name=self.model_name,
             pretrained=self.pretrained,
             anchor_scale=self.anchor_scale,
             pretrained_backbone=self.pretrained_backbone,
+            image_size=self.image_size,
         )
         self.evaluator = evaluator
 
@@ -242,9 +265,10 @@ class XrayDetector(pl.LightningModule):
         pretrained=True,
         anchor_scale=4,
         pretrained_backbone=True,
+        image_size=512,
     ):
         config = get_efficientdet_config(model_name)
-        config.image_size = (512, 512)
+        config.image_size = (image_size, image_size)
         num_classes = 14
         config.anchor_scale = anchor_scale
 
