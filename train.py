@@ -40,6 +40,12 @@ def main():
     parser.add_argument("--precision", default=32, type=int)
 
     parser.add_argument("--model_name")
+
+    # d0: 512, d1: 640, d2: 768, d3: 896
+    # d4: 1024, d5: 1280, d6: 1280, d7: 1536
+    parser.add_argument(
+        "--detector_image_size", default=512, choices=[x * 128 for x in range(4, 13)]
+    )
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--fold_index", default=0, type=int)
@@ -81,7 +87,9 @@ def main():
             image_size=image_size,
         )
     elif args.mode == "detection":
-        image_size = 512
+        # d0: 512, d1: 640, d2: 768, d3: 896
+        # d4: 1024, d5: 1280, d6: 1280, d7: 1536
+        image_size = args.detector_image_size
         dm = XrayDetectionDataModule(
             dataset_dir=args.dataset_dir,
             batch_size=args.batch_size,
@@ -119,6 +127,7 @@ def main():
             max_epochs=args.max_epochs,
             anchor_scale=args.anchor_scale,
             evaluator=evaluator,
+            image_size=image_size,
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
