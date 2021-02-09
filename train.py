@@ -44,7 +44,10 @@ def main():
     # d0: 512, d1: 640, d2: 768, d3: 896
     # d4: 1024, d5: 1280, d6: 1280, d7: 1536
     parser.add_argument(
-        "--detector_image_size", default=512, choices=[x * 128 for x in range(4, 13)]
+        "--detector_image_size",
+        default=512,
+        type=int,
+        choices=[x * 128 for x in range(4, 13)],
     )
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--num_workers", default=2, type=int)
