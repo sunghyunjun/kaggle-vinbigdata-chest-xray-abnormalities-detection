@@ -97,7 +97,13 @@ class XrayFindingDataModule(pl.LightningDataModule):
                     ],
                     p=0.5,
                 ),
-                A.Resize(height=self.resize_height, width=self.resize_width),
+                A.RandomResizedCrop(
+                    height=self.resize_height,
+                    width=self.resize_width,
+                    scale=(0.1, 1.0),
+                    p=1.0,
+                ),
+                # A.Resize(height=self.resize_height, width=self.resize_width),
                 A.Normalize(),
                 ToTensorV2(),
             ]
@@ -216,7 +222,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                 A.RandomResizedCrop(
                     height=self.resize_height,
                     width=self.resize_width,
-                    scale=(0.8, 1.2),
+                    scale=(0.1, 1.0),
                     p=1.0,
                 ),
                 # A.Resize(height=self.resize_height, width=self.resize_width),
