@@ -92,13 +92,16 @@ class XrayClassifier(pl.LightningModule):
         precision = self.valid_precision(preds, targets)
         recall = self.valid_recall(preds, targets)
 
-        fpr, tpr, thresholds = self.valid_roc(preds, targets)
-        auc = pl.metrics.functional.classification.auc(fpr, tpr)
+        try:
+            fpr, tpr, thresholds = self.valid_roc(preds, targets)
+            auc = pl.metrics.functional.classification.auc(fpr, tpr)
+            self.log("val_auc", auc)
+        except ValueError:
+            pass
 
         self.log("val_acc_epoch", self.valid_acc.compute())
         self.log("val_precision", precision)
         self.log("val_recall", recall)
-        self.log("val_auc", auc)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(
