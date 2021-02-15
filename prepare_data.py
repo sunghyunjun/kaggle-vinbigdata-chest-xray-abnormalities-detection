@@ -13,8 +13,8 @@ from tqdm import tqdm
 warnings.filterwarnings(action="ignore", category=UserWarning)
 
 
-def read_xray(path, voi_lut=True, fix_monochrome=True, downscale_factor=3):
-    # Read dicom image and downscale 3x by default.
+def read_xray(path, voi_lut=True, fix_monochrome=True, downscale_factor=1):
+    # Read dicom image.
     # Original from:
     # https://www.kaggle.com/raddar/convert-dicom-to-np-array-the-correct-way
     # https://www.kaggle.com/raddar/vinbigdata-competition-jpg-data-3x-downsampled
@@ -54,41 +54,84 @@ def main():
     os.makedirs(os.path.join(jpg_data_dir, "train"), exist_ok=True)
     os.makedirs(os.path.join(jpg_data_dir, "test"), exist_ok=True)
 
-    train_files = os.listdir(os.path.join(raw_data_dir, "train"))
-    test_files = os.listdir(os.path.join(raw_data_dir, "test"))
+    train_images = os.listdir(os.path.join(raw_data_dir, "train"))
+    test_images = os.listdir(os.path.join(raw_data_dir, "test"))
 
     df = pd.read_csv(os.path.join(raw_data_dir, "train.csv"))
 
-    print("Make 3x downsampled images and csv file to 'dataset-jpg'")
-    print("Making train_3x_downsampled.csv")
+    IMAGE_SIZE = 1024
 
-    df[["x_min", "y_min", "x_max", "y_max"]] = df[
-        ["x_min", "y_min", "x_max", "y_max"]
-    ].floordiv(3)
-    df.to_csv(os.path.join(jpg_data_dir, "train_3x_downsampled.csv"))
-
-    print("Making train images - 3x downsampled jpg")
+    print(f"Making train images - {IMAGE_SIZE} px jpg")
     if args.debug:
-        pbar = tqdm(train_files[:10])
+        pbar = tqdm(train_images[:10])
     else:
-        pbar = tqdm(train_files)
+        pbar = tqdm(train_images)
 
-    for file in pbar:
-        img = read_xray(os.path.join(raw_data_dir, "train", file))
-        cv2.imwrite(
-            os.path.join(jpg_data_dir, "train", file.replace(".dicom", ".jpg")), img
+    new_df = pd.DataFrame(
+        columns=[
+            "image_id",
+            "class_name",
+            "class_id",
+            "rad_id",
+            "x_min",
+            "y_min",
+            "x_max",
+            "y_max",
+        ],
+    )
+
+    for raw_image in pbar:
+        img = read_xray(
+            os.path.join(raw_data_dir, "train", raw_image), downscale_factor=1
         )
 
-    print("Making test images - 3x downsampled jpg")
-    if args.debug:
-        pbar = tqdm(test_files[:10])
-    else:
-        pbar = tqdm(test_files)
+        scale_x = IMAGE_SIZE / img.shape[1]
+        scale_y = IMAGE_SIZE / img.shape[0]
 
-    for file in pbar:
-        img = read_xray(os.path.join(raw_data_dir, "test", file))
+        image_id = raw_image.split(".")[0]
+
+        temp_df = df[df.image_id == image_id].copy()
+
+        temp_df["raw_x_min"] = temp_df["x_min"]
+        temp_df["raw_x_max"] = temp_df["x_max"]
+        temp_df["raw_y_min"] = temp_df["y_min"]
+        temp_df["raw_y_max"] = temp_df["y_max"]
+
+        temp_df["raw_width"] = img.shape[1]
+        temp_df["raw_height"] = img.shape[0]
+
+        temp_df["scale_x"] = scale_x
+        temp_df["scale_y"] = scale_y
+
+        temp_df[["x_min", "x_max"]] = temp_df[["x_min", "x_max"]].mul(scale_x).round(0)
+        temp_df[["y_min", "y_max"]] = temp_df[["y_min", "y_max"]].mul(scale_y).round(0)
+
+        new_df = new_df.append(temp_df, ignore_index=True)
+
+        img = cv2.resize(img, (IMAGE_SIZE, IMAGE_SIZE), interpolation=cv2.INTER_AREA)
+
         cv2.imwrite(
-            os.path.join(jpg_data_dir, "test", file.replace(".dicom", ".jpg")), img
+            os.path.join(jpg_data_dir, "train", raw_image.replace(".dicom", ".jpg")),
+            img,
+        )
+
+    new_df.to_csv(os.path.join(jpg_data_dir, "train.csv"))
+
+    print(f"Making test images - {IMAGE_SIZE} px jpg")
+    if args.debug:
+        pbar = tqdm(test_images[:10])
+    else:
+        pbar = tqdm(test_images)
+
+    for raw_image in pbar:
+        img = read_xray(
+            os.path.join(raw_data_dir, "test", raw_image), downscale_factor=1
+        )
+
+        img = cv2.resize(img, (IMAGE_SIZE, IMAGE_SIZE), interpolation=cv2.INTER_AREA)
+
+        cv2.imwrite(
+            os.path.join(jpg_data_dir, "test", raw_image.replace(".dicom", ".jpg")), img
         )
 
 
