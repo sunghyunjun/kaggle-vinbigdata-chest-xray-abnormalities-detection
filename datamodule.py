@@ -9,7 +9,12 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from dataset import XrayFindingDataset, XrayDetectionDataset, XrayTestDataset
+from dataset import (
+    XrayFindingDataset,
+    XrayDetectionDataset,
+    XrayTestDataset,
+    XrayDetectionNmsDataset,
+)
 
 
 class XrayFindingDataModule(pl.LightningDataModule):
@@ -119,6 +124,8 @@ class XrayFindingDataModule(pl.LightningDataModule):
         )
 
     def make_fold_index(self, n_splits=10, fold_index=0):
+        print(f"Fold splits: {n_splits}")
+        print(f"Fold index: {fold_index}")
         skf = StratifiedKFold(n_splits=n_splits)
         train_fold = []
         valid_fold = []
@@ -253,6 +260,8 @@ class XrayDetectionDataModule(pl.LightningDataModule):
         )
 
     def make_fold_index(self, n_splits=10, fold_index=0):
+        print(f"Fold splits: {n_splits}")
+        print(f"Fold index: {fold_index}")
         skf = StratifiedKFold(n_splits=n_splits)
         train_fold = []
         valid_fold = []
@@ -274,6 +283,25 @@ class XrayDetectionDataModule(pl.LightningDataModule):
             "labels": labels,
             "image_id": image_id,
         }
+
+
+class XrayDetectionNmsDataModule(XrayDetectionDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionNmsDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_dataset = XrayDetectionNmsDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
 
 
 class XrayTestDataModule(pl.LightningDataModule):
