@@ -10,7 +10,9 @@ dataset-jpg/
 notebook/
 
 dataset-jpg.zip
+dataset-jpg-3x.zip
 kaggle.json
 checkpoint/
 submission.csv
 dataset-jpg-2x/
+dataset-jpg-3x/
