@@ -11,7 +11,11 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from efficientnet_pytorch import EfficientNet
 
-from datamodule import XrayFindingDataModule, XrayDetectionDataModule
+from datamodule import (
+    XrayFindingDataModule,
+    XrayDetectionDataModule,
+    XrayDetectionNmsDataModule,
+)
 from models import XrayClassifier, XrayDetector
 from evaluator import XrayEvaluator
 
@@ -28,6 +32,9 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--mode", choices=["classification", "detection"])
+
+    parser.add_argument("--detector_bbox_nms", action="store_true")
+
     parser.add_argument("--dataset_dir", default="dataset-jpg")
     parser.add_argument("--default_root_dir", default=os.getcwd())
     parser.add_argument("--lr_finder", action="store_true")
@@ -51,6 +58,7 @@ def main():
     )
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--num_workers", default=2, type=int)
+    parser.add_argument("--fold_splits", default=10, type=int)
     parser.add_argument("--fold_index", default=0, type=int)
     parser.add_argument("--max_epochs", default=10, type=int)
     parser.add_argument("--anchor_scale", default=4, type=int)
@@ -86,6 +94,7 @@ def main():
             dataset_dir=args.dataset_dir,
             batch_size=args.batch_size,
             num_workers=args.num_workers,
+            fold_splits=args.fold_splits,
             fold_index=args.fold_index,
             image_size=image_size,
         )
@@ -93,13 +102,24 @@ def main():
         # d0: 512, d1: 640, d2: 768, d3: 896
         # d4: 1024, d5: 1280, d6: 1280, d7: 1536
         image_size = args.detector_image_size
-        dm = XrayDetectionDataModule(
-            dataset_dir=args.dataset_dir,
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-            fold_index=args.fold_index,
-            image_size=image_size,
-        )
+        if args.detector_bbox_nms:
+            dm = XrayDetectionNmsDataModule(
+                dataset_dir=args.dataset_dir,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                fold_splits=args.fold_splits,
+                fold_index=args.fold_index,
+                image_size=image_size,
+            )
+        else:
+            dm = XrayDetectionDataModule(
+                dataset_dir=args.dataset_dir,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                fold_splits=args.fold_splits,
+                fold_index=args.fold_index,
+                image_size=image_size,
+            )
 
     # ----------
     # model
