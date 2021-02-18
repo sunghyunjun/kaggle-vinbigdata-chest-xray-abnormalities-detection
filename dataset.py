@@ -289,7 +289,7 @@ class XrayTestDataset(Dataset):
         image_id = self.image_ids[index]
         image_path = os.path.join(self.testset_dir, image_id)
 
-        image = read_xray(image_path, downscale_factor=3)
+        image = read_xray(image_path, downscale_factor=1)
         # image = cv2.imread(image_path)
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
