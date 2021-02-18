@@ -201,19 +201,21 @@ class XrayDetectionDataModule(pl.LightningDataModule):
     def get_train_transform(self):
         return A.Compose(
             [
-                A.RandomResizedCrop(
-                    height=self.resize_height,
-                    width=self.resize_width,
-                    scale=(0.1, 1.0),
+                A.Resize(height=self.resize_height, width=self.resize_width),
+                A.RandomScale(scale_limit=(-0.9, 1.0), p=1.0),
+                A.PadIfNeeded(
+                    min_height=self.resize_height,
+                    min_width=self.resize_width,
+                    border_mode=cv2.BORDER_CONSTANT,
+                    value=0,
                     p=1.0,
                 ),
-                A.OneOf(
-                    [
-                        A.RandomBrightnessContrast(p=0.5),
-                        A.HueSaturationValue(p=0.5),
-                    ],
-                    p=0.5,
-                ),
+                A.RandomCrop(height=self.resize_height, width=self.resize_width, p=1.0),
+                A.RandomBrightnessContrast(p=0.8),
+                # A.HueSaturationValue(p=0.8),
+                # A.RandomGamma(p=0.8),
+                A.ChannelDropout(p=0.5),
+                # A.InvertImg(p=0.5),
                 A.OneOf(
                     [
                         A.CLAHE(p=0.5),
@@ -227,142 +229,18 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                         A.MedianBlur(p=0.5),
                         A.GaussianBlur(p=0.5),
                         A.GaussNoise(p=0.5),
-                        A.IAASharpen(p=0.5),
                     ],
                     p=0.5,
                 ),
-                A.OneOf(
-                    [
-                        A.HorizontalFlip(p=0.5),
-                        A.ShiftScaleRotate(
-                            shift_limit=0.0625,
-                            scale_limit=0.1,
-                            rotate_limit=10,
-                            border_mode=cv2.BORDER_CONSTANT,
-                            value=0,
-                            p=0.5,
-                        ),
-                    ],
-                    p=0.5,
-                ),
-                A.Normalize(),
-                ToTensorV2(),
-            ],
-            bbox_params=A.BboxParams(
-                format="pascal_voc",
-                min_area=0,
-                min_visibility=0,
-                label_fields=["labels"],
-            ),
-        )
-
-    def get_train_transform_v1(self):
-        return A.Compose(
-            [
-                A.OneOf(
-                    [
-                        A.RandomBrightnessContrast(p=0.5),
-                        A.RGBShift(p=0.5),
-                        A.HueSaturationValue(p=0.5),
-                        A.ToGray(p=0.5),
-                        A.ChannelDropout(p=0.5),
-                        A.ChannelShuffle(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        A.Blur(p=0.5),
-                        A.GaussNoise(p=0.5),
-                        A.IAASharpen(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        # A.Rotate(limit=20, p=0.5),
-                        A.HorizontalFlip(p=0.5),
-                        # A.VerticalFlip(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.RandomResizedCrop(
-                    height=self.resize_height,
-                    width=self.resize_width,
-                    scale=(0.1, 1.0),
-                    p=1.0,
-                ),
-                # A.Resize(height=self.resize_height, width=self.resize_width),
-                A.Normalize(),
-                ToTensorV2(),
-            ],
-            bbox_params=A.BboxParams(
-                format="pascal_voc",
-                min_area=0,
-                min_visibility=0,
-                label_fields=["labels"],
-            ),
-        )
-
-    def get_train_transform_v2(self):
-        return A.Compose(
-            [
-                A.Resize(height=self.resize_height, width=self.resize_width),
-                A.RandomScale(scale_limit=(0.1, 2.0), p=1.0),
-                A.PadIfNeeded(
-                    min_height=self.resize_height,
-                    min_width=self.resize_width,
-                    border_mode=cv2.BORDER_CONSTANT,
-                    value=0,
-                    p=1.0,
-                ),
-                A.RandomCrop(height=self.resize_height, width=self.resize_width, p=1.0),
-                A.OneOf(
-                    [
-                        A.RandomBrightnessContrast(p=0.5),
-                        A.HueSaturationValue(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        A.CLAHE(p=0.5),
-                        A.Equalize(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        A.Blur(p=0.5),
-                        # A.MotionBlur(p=0.5),
-                        # A.MedianBlur(p=0.5),
-                        # A.GaussianBlur(p=0.5),
-                        A.GaussNoise(p=0.5),
-                        A.IAASharpen(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        A.HorizontalFlip(p=0.5),
-                        A.ShiftScaleRotate(
-                            shift_limit=0.0625,
-                            scale_limit=0.1,
-                            rotate_limit=10,
-                            border_mode=cv2.BORDER_CONSTANT,
-                            value=0,
-                            p=0.5,
-                        ),
-                    ],
-                    p=0.5,
-                ),
-                A.Cutout(
-                    num_holes=8,
-                    max_h_size=64,
-                    max_w_size=64,
-                    fill_value=0,
-                    p=0.5,
-                ),
+                A.HorizontalFlip(p=0.5),
+                # A.ShiftScaleRotate(
+                #     shift_limit=0.0625,
+                #     scale_limit=0.1,
+                #     rotate_limit=10,
+                #     border_mode=cv2.BORDER_CONSTANT,
+                #     value=0,
+                #     p=0.5,
+                # ),
                 A.Normalize(),
                 ToTensorV2(),
             ],
