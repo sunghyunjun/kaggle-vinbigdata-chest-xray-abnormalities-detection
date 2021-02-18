@@ -140,6 +140,7 @@ class XrayDetector(pl.LightningModule):
         weight_decay=1e-5,
         max_epochs=10,
         anchor_scale=4,
+        aspect_ratios_expand=False,
         evaluator: XrayEvaluator = None,
         pretrained_backbone=True,
         image_size=512,
@@ -152,11 +153,13 @@ class XrayDetector(pl.LightningModule):
         self.weight_decay = weight_decay
         self.max_epochs = max_epochs
         self.anchor_scale = anchor_scale
+        self.aspect_ratios_expand = aspect_ratios_expand
         self.image_size = image_size
         self.model = self.get_model(
             model_name=self.model_name,
             pretrained=self.pretrained,
             anchor_scale=self.anchor_scale,
+            aspect_ratios_expand=self.aspect_ratios_expand,
             pretrained_backbone=self.pretrained_backbone,
             image_size=self.image_size,
         )
@@ -269,11 +272,21 @@ class XrayDetector(pl.LightningModule):
         anchor_scale=4,
         pretrained_backbone=True,
         image_size=512,
+        aspect_ratios_expand=False,
     ):
         config = get_efficientdet_config(model_name)
         config.image_size = (image_size, image_size)
         num_classes = 14
         config.anchor_scale = anchor_scale
+        if aspect_ratios_expand:
+            config.aspect_ratios = [
+                (1.0, 1.0),
+                (1.4, 0.7),
+                (0.7, 1.4),
+                (1.8, 0.6),
+                (0.6, 1.8),
+            ]
+            pretrained = False
 
         model = create_model_from_config(
             config=config,
