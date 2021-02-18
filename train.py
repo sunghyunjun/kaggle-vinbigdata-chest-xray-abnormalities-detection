@@ -62,6 +62,7 @@ def main():
     parser.add_argument("--fold_index", default=0, type=int)
     parser.add_argument("--max_epochs", default=10, type=int)
     parser.add_argument("--anchor_scale", default=4, type=int)
+    parser.add_argument("--aspect_ratios_expand", action="store_true")
 
     parser.add_argument("--init_lr", default=1e-4, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float)
@@ -149,6 +150,7 @@ def main():
             weight_decay=args.weight_decay,
             max_epochs=args.max_epochs,
             anchor_scale=args.anchor_scale,
+            aspect_ratios_expand=args.aspect_ratios_expand,
             evaluator=evaluator,
             image_size=image_size,
         )
