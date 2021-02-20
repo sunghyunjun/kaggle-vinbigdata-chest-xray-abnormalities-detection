@@ -16,6 +16,7 @@ from dataset import (
     XrayDetectionDataset,
     XrayTestDataset,
     XrayDetectionNmsDataset,
+    XrayDetectionWbfDataset,
 )
 
 
@@ -212,17 +213,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                 ),
                 A.RandomCrop(height=self.resize_height, width=self.resize_width, p=1.0),
                 A.RandomBrightnessContrast(p=0.8),
-                # A.HueSaturationValue(p=0.8),
-                # A.RandomGamma(p=0.8),
                 A.ChannelDropout(p=0.5),
-                # A.InvertImg(p=0.5),
-                A.OneOf(
-                    [
-                        A.CLAHE(p=0.5),
-                        A.Equalize(p=0.5),
-                    ],
-                    p=0.5,
-                ),
                 A.OneOf(
                     [
                         A.MotionBlur(p=0.5),
@@ -233,14 +224,6 @@ class XrayDetectionDataModule(pl.LightningDataModule):
                     p=0.5,
                 ),
                 A.HorizontalFlip(p=0.5),
-                # A.ShiftScaleRotate(
-                #     shift_limit=0.0625,
-                #     scale_limit=0.1,
-                #     rotate_limit=10,
-                #     border_mode=cv2.BORDER_CONSTANT,
-                #     value=0,
-                #     p=0.5,
-                # ),
                 A.Normalize(),
                 ToTensorV2(),
             ],
@@ -299,6 +282,25 @@ class XrayDetectionNmsDataModule(XrayDetectionDataModule):
             self.dataset_dir, transform=self.get_train_transform()
         )
         self.valid_dataset = XrayDetectionNmsDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
+class XrayDetectionWbfDataModule(XrayDetectionDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionWbfDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_dataset = XrayDetectionWbfDataset(
             self.dataset_dir, transform=self.get_valid_transform()
         )
 

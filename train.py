@@ -15,6 +15,7 @@ from datamodule import (
     XrayFindingDataModule,
     XrayDetectionDataModule,
     XrayDetectionNmsDataModule,
+    XrayDetectionWbfDataModule,
 )
 from models import XrayClassifier, XrayDetector
 from evaluator import XrayEvaluator
@@ -33,7 +34,9 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--mode", choices=["classification", "detection"])
 
-    parser.add_argument("--detector_bbox_nms", action="store_true")
+    parser.add_argument(
+        "--detector_bbox_filter", default="nms", choices=["raw", "nms", "wbf"]
+    )
 
     parser.add_argument("--dataset_dir", default="dataset-jpg")
     parser.add_argument("--default_root_dir", default=os.getcwd())
@@ -103,7 +106,8 @@ def main():
         # d0: 512, d1: 640, d2: 768, d3: 896
         # d4: 1024, d5: 1280, d6: 1280, d7: 1536
         image_size = args.detector_image_size
-        if args.detector_bbox_nms:
+        if args.detector_bbox_filter == "nms":
+            print("Detector's bbox filter: NMS")
             dm = XrayDetectionNmsDataModule(
                 dataset_dir=args.dataset_dir,
                 batch_size=args.batch_size,
@@ -112,7 +116,18 @@ def main():
                 fold_index=args.fold_index,
                 image_size=image_size,
             )
+        elif args.detector_bbox_filter == "wbf":
+            print("Detector's bbox filter: WBF")
+            dm = XrayDetectionWbfDataModule(
+                dataset_dir=args.dataset_dir,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                fold_splits=args.fold_splits,
+                fold_index=args.fold_index,
+                image_size=image_size,
+            )
         else:
+            print("Detector's bbox filter: None, Raw")
             dm = XrayDetectionDataModule(
                 dataset_dir=args.dataset_dir,
                 batch_size=args.batch_size,

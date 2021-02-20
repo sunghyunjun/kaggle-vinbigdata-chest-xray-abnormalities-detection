@@ -14,6 +14,8 @@ from torchvision.ops.boxes import batched_nms
 
 from tqdm import tqdm
 
+from ensemble_boxes import *
+
 from prepare_data import read_xray
 
 
@@ -271,6 +273,105 @@ class XrayDetectionNmsDataset(XrayDetectionDataset):
         scores = torch.ones(idx.size(), dtype=torch.float32)
         keep = batched_nms(boxes, scores, idx, iou_threshold=iou_threshold)
         return boxes[keep], idx[keep]
+
+
+class XrayDetectionWbfDataset(XrayDetectionDataset):
+    def load_train_csv(self):
+        self.train_df = pd.read_csv(
+            self.csv_path,
+            usecols=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
+        )
+
+        self.train_df.drop(
+            self.train_df[self.train_df.class_id == 14].index, inplace=True
+        )
+        self.train_df.reset_index(drop=True, inplace=True)
+        self.train_df = self.train_df.astype(
+            {
+                "class_id": "float32",
+                "x_min": "float32",
+                "y_min": "float32",
+                "x_max": "float32",
+                "y_max": "float32",
+            }
+        )
+
+        # Filter out extreme large bbox data
+        self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
+            self.train_df.y_max - self.train_df.y_min
+        )
+        self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
+
+        self.image_ids = self.train_df.image_id.unique()
+
+        # bbox WBF
+        df_wbf = pd.DataFrame(
+            columns=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
+            dtype=np.float32,
+        )
+        pbar = tqdm(self.image_ids)
+        for image_id in pbar:
+            pbar.set_description("Processing bbox wbf")
+            boxes, class_ids = self.get_bbox_wbf(self.train_df, image_id)
+            for box, class_id in zip(boxes, class_ids):
+                df_wbf = df_wbf.append(
+                    [
+                        {
+                            "image_id": image_id,
+                            "class_id": class_id,
+                            "x_min": box[0],
+                            "y_min": box[1],
+                            "x_max": box[2],
+                            "y_max": box[3],
+                        }
+                    ],
+                    ignore_index=True,
+                )
+                df_wbf[["class_id", "x_min", "y_min", "x_max", "y_max"]] = df_wbf[
+                    ["class_id", "x_min", "y_min", "x_max", "y_max"]
+                ].astype(np.float32)
+
+        self.train_df = df_wbf
+
+        self.train_data = {}
+        max_index = len(self.image_ids)
+        pbar = tqdm(range(max_index))
+
+        for index in pbar:
+            pbar.set_description("Processing train_labels")
+            image_id = self.image_ids[index]
+            records = self.train_df.loc[self.train_df.image_id == image_id].copy()
+
+            self.train_data[image_id] = records[
+                ["class_id", "x_min", "y_min", "x_max", "y_max"]
+            ].values
+
+        self.most_class_ids = []
+        for image_id in self.image_ids:
+            class_ids = self.train_data[image_id][:, 0].astype(np.int64)
+            class_ids_counts = np.bincount(class_ids)
+            self.most_class_ids.append(np.argmax(class_ids_counts))
+
+    def get_bbox_wbf(self, df, image_id, iou_threshold=0.6, skip_box_thr=0.0):
+        boxes = df[["x_min", "y_min", "x_max", "y_max"]][
+            df.image_id == image_id
+        ].to_numpy()
+        idx = df["class_id"][df.image_id == image_id].to_numpy()
+        scores = np.ones(len(idx), dtype=np.float32)
+
+        boxes_max = np.max(boxes)
+        boxes_normalized = boxes / boxes_max
+
+        boxes_wbf, _, labels_wbf = weighted_boxes_fusion(
+            [boxes_normalized],
+            [scores],
+            [idx],
+            weights=None,
+            iou_thr=iou_threshold,
+            skip_box_thr=skip_box_thr,
+        )
+        boxes_wbf *= boxes_max
+        return boxes_wbf, labels_wbf
 
 
 class XrayTestDataset(Dataset):
