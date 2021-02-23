@@ -15,6 +15,7 @@ from datamodule import (
     XrayFindingDataModule,
     XrayDetectionDataModule,
     XrayDetectionNmsDataModule,
+    XrayDetectionNmsDataModule_V2,
     XrayDetectionWbfDataModule,
 )
 from models import XrayClassifier, XrayDetector
@@ -35,8 +36,10 @@ def main():
     parser.add_argument("--mode", choices=["classification", "detection"])
 
     parser.add_argument(
-        "--detector_bbox_filter", default="nms", choices=["raw", "nms", "wbf"]
+        "--detector_bbox_filter", default="nms", choices=["raw", "nms", "nms_v2", "wbf"]
     )
+
+    parser.add_argument("--resume_from_checkpoint", default=None)
 
     parser.add_argument("--dataset_dir", default="dataset-jpg")
     parser.add_argument("--default_root_dir", default=os.getcwd())
@@ -109,6 +112,16 @@ def main():
         if args.detector_bbox_filter == "nms":
             print("Detector's bbox filter: NMS")
             dm = XrayDetectionNmsDataModule(
+                dataset_dir=args.dataset_dir,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                fold_splits=args.fold_splits,
+                fold_index=args.fold_index,
+                image_size=image_size,
+            )
+        elif args.detector_bbox_filter == "nms_v2":
+            print("Detector's bbox filter: NMS_V2")
+            dm = XrayDetectionNmsDataModule_V2(
                 dataset_dir=args.dataset_dir,
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
@@ -214,6 +227,7 @@ def main():
     # ----------
     # python train.py --debug --mode=classification --model_name="efficientnet-b0"
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0"
+    # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw
 
 
 if __name__ == "__main__":
