@@ -19,7 +19,7 @@ from datamodule import (
     XrayDetectionWbfDataModule,
 )
 from models import XrayClassifier, XrayDetector
-from evaluator import XrayEvaluator
+from evaluator import XrayEvaluator, ZFTurboEvaluator
 
 
 def main():
@@ -171,6 +171,7 @@ def main():
     elif args.mode == "detection":
         dm.setup()
         evaluator = XrayEvaluator(dm.valid_dataset)
+        evaluator_alt = ZFTurboEvaluator(image_size=image_size)
 
         model = XrayDetector(
             model_name=args.model_name,
@@ -180,6 +181,7 @@ def main():
             anchor_scale=args.anchor_scale,
             aspect_ratios_expand=args.aspect_ratios_expand,
             evaluator=evaluator,
+            evaluator_alt=evaluator_alt,
             image_size=image_size,
         )
         checkpoint_callback = ModelCheckpoint(

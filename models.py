@@ -11,7 +11,9 @@ from effdet import create_model, create_model_from_config
 from effdet.config import get_efficientdet_config
 from effdet.bench import _post_process, _batch_detection
 
-from evaluator import XrayEvaluator
+from map_boxes import mean_average_precision_for_boxes
+
+from evaluator import XrayEvaluator, ZFTurboEvaluator
 
 
 class XrayClassifier(pl.LightningModule):
@@ -142,6 +144,7 @@ class XrayDetector(pl.LightningModule):
         anchor_scale=4,
         aspect_ratios_expand=False,
         evaluator: XrayEvaluator = None,
+        evaluator_alt: ZFTurboEvaluator = None,
         pretrained_backbone=True,
         image_size=512,
     ):
@@ -164,6 +167,7 @@ class XrayDetector(pl.LightningModule):
             image_size=self.image_size,
         )
         self.evaluator = evaluator
+        self.evaluator_alt = evaluator_alt
 
         self.save_hyperparameters()
 
@@ -209,12 +213,14 @@ class XrayDetector(pl.LightningModule):
         image = batch["image"]
         boxes = batch["bboxes"]
         labels = batch["labels"]
+
         output = self.model(
             image, {"bbox": boxes, "cls": labels, "img_scale": None, "img_size": None}
         )
         loss = output["loss"]
         class_loss = output["class_loss"]
         box_loss = output["box_loss"]
+        detections = output["detections"]
 
         if batch_idx == 0:
             self.initial_batch_size = len(image)
@@ -226,23 +232,16 @@ class XrayDetector(pl.LightningModule):
             + self.initial_batch_size * batch_idx
         )
 
-        # print(batch_idx, img_idx)
+        targets = {}
+        targets["img_idx"] = img_idx
+        targets["bbox"] = boxes
+        targets["cls"] = labels
 
         if self.evaluator:
-            detections = output["detections"]
-            # print(f"before: {detections.size()}")
-
-            # test filtering score > 0.001, 0.3
-            # detections = detections[torch.where(detections[:, :, 4] > 0.3)].reshape(
-            #     batch_size, -1, 6
-            # )
-            # print(f"after: {detections.size()}")
-            targets = {}
-            # targets["img_idx"] = torch.LongTensor([batch_idx])
-            targets["img_idx"] = img_idx
-            targets["bbox"] = boxes
-            targets["cls"] = labels
             self.evaluator.add_predictions(detections, targets)
+
+        if self.evaluator_alt:
+            self.evaluator_alt.add_predictions(detections, targets)
 
         self.log("val_loss", loss)
         self.log("val_cls_loss", class_loss)
@@ -251,8 +250,12 @@ class XrayDetector(pl.LightningModule):
 
     def validation_epoch_end(self, validation_step_outputs):
         if self.evaluator:
-            # self.log("mAP", self.evaluator.evaluate())
             metrics = self.evaluator.evaluate()
+            for key, value in metrics.items():
+                self.log(key, value)
+
+        if self.evaluator_alt:
+            metrics = self.evaluator_alt.evaluate()
             for key, value in metrics.items():
                 self.log(key, value)
 
