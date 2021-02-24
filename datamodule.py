@@ -187,6 +187,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
         batch_size=32,
         num_workers=2,
         image_size=512,
+        valid_filter=False,
     ):
         super().__init__()
         self.dataset_dir = dataset_dir
@@ -196,6 +197,7 @@ class XrayDetectionDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.resize_height = image_size
         self.resize_width = image_size
+        self.valid_filter = valid_filter
 
     def setup(self, stage=None):
         self.train_dataset = XrayDetectionDataset(
@@ -318,9 +320,17 @@ class XrayDetectionNmsDataModule(XrayDetectionDataModule):
         self.train_dataset = XrayDetectionNmsDataset(
             self.dataset_dir, transform=self.get_train_transform()
         )
-        self.valid_dataset = XrayDetectionNmsDataset(
-            self.dataset_dir, transform=self.get_valid_transform()
-        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionNmsDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
 
         self.image_ids = self.train_dataset.image_ids
         self.most_class_ids = self.train_dataset.most_class_ids
@@ -337,9 +347,17 @@ class XrayDetectionNmsDataModule_V2(XrayDetectionDataModule):
         self.train_dataset = XrayDetectionNmsDataset_V2(
             self.dataset_dir, transform=self.get_train_transform()
         )
-        self.valid_dataset = XrayDetectionNmsDataset_V2(
-            self.dataset_dir, transform=self.get_valid_transform()
-        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionNmsDataset_V2(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
 
         self.image_ids = self.train_dataset.image_ids
         self.most_class_ids = self.train_dataset.most_class_ids
@@ -356,9 +374,17 @@ class XrayDetectionWbfDataModule(XrayDetectionDataModule):
         self.train_dataset = XrayDetectionWbfDataset(
             self.dataset_dir, transform=self.get_train_transform()
         )
-        self.valid_dataset = XrayDetectionWbfDataset(
-            self.dataset_dir, transform=self.get_valid_transform()
-        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionWbfDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
 
         self.image_ids = self.train_dataset.image_ids
         self.most_class_ids = self.train_dataset.most_class_ids

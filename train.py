@@ -39,6 +39,8 @@ def main():
         "--detector_bbox_filter", default="nms", choices=["raw", "nms", "nms_v2", "wbf"]
     )
 
+    parser.add_argument("--detector_valid_bbox_filter", action="store_true")
+
     parser.add_argument("--resume_from_checkpoint", default=None)
 
     parser.add_argument("--dataset_dir", default="dataset-jpg")
@@ -118,6 +120,7 @@ def main():
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
                 image_size=image_size,
+                valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "nms_v2":
             print("Detector's bbox filter: NMS_V2")
@@ -128,6 +131,7 @@ def main():
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
                 image_size=image_size,
+                valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "wbf":
             print("Detector's bbox filter: WBF")
@@ -138,6 +142,7 @@ def main():
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
                 image_size=image_size,
+                valid_filter=args.detector_valid_bbox_filter,
             )
         else:
             print("Detector's bbox filter: None, Raw")
