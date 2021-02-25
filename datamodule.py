@@ -103,13 +103,7 @@ class XrayFindingDataModule(pl.LightningDataModule):
                 A.HorizontalFlip(p=0.5),
                 A.Normalize(),
                 ToTensorV2(),
-            ],
-            bbox_params=A.BboxParams(
-                format="pascal_voc",
-                min_area=0,
-                min_visibility=0,
-                label_fields=["labels"],
-            ),
+            ]
         )
 
     def get_train_transform_v1(self):
