@@ -38,8 +38,9 @@ def main():
     parser.add_argument(
         "--detector_bbox_filter", default="nms", choices=["raw", "nms", "nms_v2", "wbf"]
     )
-
     parser.add_argument("--detector_valid_bbox_filter", action="store_true")
+
+    parser.add_argument("--evaluator_alt", action="store_true")
 
     parser.add_argument("--resume_from_checkpoint", default=None)
 
@@ -53,6 +54,7 @@ def main():
 
     parser.add_argument("--gpus", default=None, type=int)
     parser.add_argument("--precision", default=32, type=int)
+    parser.add_argument("--accumulate_grad_batches", default=1, type=int)
 
     parser.add_argument("--model_name")
 
@@ -176,7 +178,10 @@ def main():
     elif args.mode == "detection":
         dm.setup()
         evaluator = XrayEvaluator(dm.valid_dataset)
-        evaluator_alt = ZFTurboEvaluator(image_size=image_size)
+
+        evaluator_alt = (
+            ZFTurboEvaluator(image_size=image_size) if args.evaluator_alt else None
+        )
 
         model = XrayDetector(
             model_name=args.model_name,
