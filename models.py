@@ -1,3 +1,5 @@
+import operator
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,6 +16,40 @@ from effdet.bench import _post_process, _batch_detection
 from map_boxes import mean_average_precision_for_boxes
 
 from evaluator import XrayEvaluator, ZFTurboEvaluator
+
+
+def set_bn_eval(m):
+    classname = m.__class__.__name__
+    if "BatchNorm2d" in classname:
+        m.affine = False
+        m.weight.requires_grad = False
+        m.bias.requires_grad = False
+        m.eval()
+
+
+def freeze_bn(model):
+    model.apply(set_bn_eval)
+
+
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition(".")
+    # return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+    return setattr(operator.attrgetter(pre)(obj) if pre else obj, post, val)
+
+
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+
+    return functools.reduce(_getattr, [obj] + attr.split("."))
+
+
+def set_gn(model):
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.BatchNorm2d):
+            bn = operator.attrgetter(name)(model)
+            gn = torch.nn.GroupNorm(8, bn.num_features)
+            rsetattr(model, name, gn)
 
 
 class XrayClassifier(pl.LightningModule):
@@ -147,6 +183,8 @@ class XrayDetector(pl.LightningModule):
         evaluator_alt: ZFTurboEvaluator = None,
         pretrained_backbone=True,
         image_size=512,
+        freeze_batch_norm=False,
+        group_norm=False,
     ):
         super().__init__()
         self.model_name = model_name
@@ -158,6 +196,8 @@ class XrayDetector(pl.LightningModule):
         self.anchor_scale = anchor_scale
         self.aspect_ratios_expand = aspect_ratios_expand
         self.image_size = image_size
+        self.freeze_batch_norm = freeze_batch_norm
+        self.group_norm = group_norm
         self.model = self.get_model(
             model_name=self.model_name,
             pretrained=self.pretrained,
@@ -165,6 +205,8 @@ class XrayDetector(pl.LightningModule):
             aspect_ratios_expand=self.aspect_ratios_expand,
             pretrained_backbone=self.pretrained_backbone,
             image_size=self.image_size,
+            freeze_batch_norm=self.freeze_batch_norm,
+            group_norm=self.group_norm,
         )
         self.evaluator = evaluator
         self.evaluator_alt = evaluator_alt
@@ -276,6 +318,8 @@ class XrayDetector(pl.LightningModule):
         pretrained_backbone=True,
         image_size=512,
         aspect_ratios_expand=False,
+        freeze_batch_norm=False,
+        group_norm=False,
     ):
         config = get_efficientdet_config(model_name)
         config.image_size = (image_size, image_size)
@@ -301,6 +345,13 @@ class XrayDetector(pl.LightningModule):
             bench_labeler=True,
             pretrained_backbone=pretrained_backbone,
         )
+
+        if freeze_batch_norm:
+            freeze_bn(model)
+
+        if group_norm:
+            print("BatchNorm changed to GroupNorm")
+            set_gn(model)
 
         return model
 

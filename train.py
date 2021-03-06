@@ -40,6 +40,9 @@ def main():
     )
     parser.add_argument("--detector_valid_bbox_filter", action="store_true")
 
+    parser.add_argument("--freeze_batch_norm", action="store_true")
+    parser.add_argument("--group_norm", action="store_true")
+
     parser.add_argument("--evaluator_alt", action="store_true")
 
     parser.add_argument("--resume_from_checkpoint", default=None)
@@ -54,6 +57,7 @@ def main():
 
     parser.add_argument("--gpus", default=None, type=int)
     parser.add_argument("--precision", default=32, type=int)
+    parser.add_argument("--amp_level", default="O2", choices=["O1", "O2", "O3"])
     parser.add_argument("--accumulate_grad_batches", default=1, type=int)
 
     parser.add_argument("--model_name")
@@ -172,6 +176,7 @@ def main():
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             filename="xray-classifier-{epoch:03d}-{val_loss:.4f}",
+            save_last=True,
             save_top_k=3,
             mode="min",
         )
@@ -193,10 +198,13 @@ def main():
             evaluator=evaluator,
             evaluator_alt=evaluator_alt,
             image_size=image_size,
+            freeze_batch_norm=args.freeze_batch_norm,
+            group_norm=args.group_norm,
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             filename="xray-detector-{epoch:03d}-{val_loss:.4f}",
+            save_last=True,
             save_top_k=3,
             mode="min",
         )
