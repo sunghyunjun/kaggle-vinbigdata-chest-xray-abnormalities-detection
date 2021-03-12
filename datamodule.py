@@ -106,48 +106,6 @@ class XrayFindingDataModule(pl.LightningDataModule):
             ]
         )
 
-    def get_train_transform_v1(self):
-        return A.Compose(
-            [
-                A.OneOf(
-                    [
-                        A.RandomBrightnessContrast(p=0.5),
-                        A.RGBShift(p=0.5),
-                        A.HueSaturationValue(p=0.5),
-                        A.ToGray(p=0.5),
-                        A.ChannelDropout(p=0.5),
-                        A.ChannelShuffle(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        A.Blur(p=0.5),
-                        A.GaussNoise(p=0.5),
-                        A.IAASharpen(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.OneOf(
-                    [
-                        # A.Rotate(limit=20, p=0.5),
-                        A.HorizontalFlip(p=0.5),
-                        # A.VerticalFlip(p=0.5),
-                    ],
-                    p=0.5,
-                ),
-                A.RandomResizedCrop(
-                    height=self.resize_height,
-                    width=self.resize_width,
-                    scale=(0.1, 1.0),
-                    p=1.0,
-                ),
-                # A.Resize(height=self.resize_height, width=self.resize_width),
-                A.Normalize(),
-                ToTensorV2(),
-            ]
-        )
-
     def get_valid_transform(self):
         return A.Compose(
             [

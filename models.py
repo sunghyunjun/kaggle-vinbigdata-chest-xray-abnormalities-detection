@@ -53,152 +53,6 @@ def set_gn(model):
             rsetattr(model, name, gn)
 
 
-class XrayClassifier_v1(pl.LightningModule):
-    def __init__(
-        self,
-        model_name="efficientnet-b0",
-        pretrained=True,
-        init_lr=1e-4,
-        weight_decay=1e-5,
-        max_epochs=10,
-        use_timm=False,
-        group_norm=False,
-    ):
-        super().__init__()
-        self.model_name = model_name
-        self.pretrained = pretrained
-        self.init_lr = init_lr
-        self.weight_decay = weight_decay
-        self.max_epochs = max_epochs
-        self.num_classes = 1
-        self.use_timm = use_timm
-        self.group_norm = group_norm
-
-        if self.use_timm:
-            self.model = self.get_model_timm(
-                self.model_name,
-                self.pretrained,
-                group_norm=self.group_norm,
-            )
-        else:
-            self.model = self.get_model(self.model_name, self.pretrained)
-
-        self.train_acc = pl.metrics.Accuracy()
-        self.valid_acc = pl.metrics.Accuracy()
-
-        self.valid_precision = pl.metrics.Precision()
-        self.valid_recall = pl.metrics.Recall()
-        self.valid_roc = pl.metrics.ROC()
-
-        self.save_hyperparameters()
-
-    def forward(self, x):
-        target = torch.sigmoid(self.model(x))
-        return target
-
-    def training_step(self, batch, batch_idx):
-        image, target = batch
-        output = self.model(image)
-        output = torch.squeeze(output)
-
-        pred = torch.sigmoid(output)
-        # pred = torch.squeeze(pred)
-
-        target = target.float()
-
-        loss = F.binary_cross_entropy_with_logits(output, target)
-        self.log("train_loss", loss)
-        self.log("train_acc_step", self.train_acc(pred, target))
-        return loss
-
-    def training_epoch_end(self, training_step_outputs):
-        self.log("train_acc_epoch", self.train_acc.compute())
-
-    def validation_step(self, batch, batch_idx):
-        image, target = batch
-        output = self.model(image)
-        pred = torch.sigmoid(output)
-
-        pred = torch.squeeze(pred)
-        target = target.float()
-
-        loss = F.binary_cross_entropy_with_logits(pred, target)
-        self.log("val_loss", loss)
-        self.log("val_acc_step", self.valid_acc(pred, target))
-        # return loss
-        return {"pred": pred, "target": target}
-
-    def validation_epoch_end(self, validation_step_outputs):
-        preds = None
-        targets = None
-        for out in validation_step_outputs:
-            if preds is None:
-                preds = out["pred"]
-            else:
-                preds = torch.cat([preds, out["pred"]], dim=0)
-
-            if targets is None:
-                targets = out["target"]
-            else:
-                targets = torch.cat([targets, out["target"]], dim=0)
-
-        precision = self.valid_precision(preds, targets)
-        recall = self.valid_recall(preds, targets)
-
-        try:
-            fpr, tpr, thresholds = self.valid_roc(preds, targets)
-            auc = pl.metrics.functional.classification.auc(fpr, tpr)
-            self.log("val_auc", auc)
-        except ValueError:
-            pass
-
-        self.log("val_acc_epoch", self.valid_acc.compute())
-        self.log("val_precision", precision)
-        self.log("val_recall", recall)
-
-    def configure_optimizers(self):
-        optimizer = optim.AdamW(
-            self.parameters(), lr=self.init_lr, weight_decay=self.weight_decay
-        )
-
-        scheduler = CosineAnnealingLR(optimizer, T_max=self.max_epochs)
-        print(f"CosineAnnealingLR T_max epochs = {self.max_epochs}")
-        return [optimizer], [scheduler]
-
-    def get_model(self, model_name="efficientnet-b0", pretrained=True):
-        if pretrained:
-            model = EfficientNet.from_pretrained(model_name)
-        else:
-            model = EfficientNet.from_name(model_name)
-
-        num_in_features = model._fc.in_features
-        model._fc = nn.Linear(num_in_features, self.num_classes)
-
-        return model
-
-    def get_model_timm(
-        self,
-        model_name="efficientnet_b0",
-        pretrained=True,
-        group_norm=False,
-    ):
-        print("Use timm for XrayClassifier.")
-        model = timm.create_model(model_name, pretrained, num_classes=self.num_classes)
-
-        if group_norm:
-            print("BatchNorm changed to GroupNorm")
-            set_gn(model)
-
-        return model
-
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--init_lr", type=float, default=1e-4)
-        parser.add_argument("--weight_decay", type=float, default=1e-5)
-        return parser
-
-
 class XrayClassifier(pl.LightningModule):
     def __init__(
         self,
@@ -218,11 +72,7 @@ class XrayClassifier(pl.LightningModule):
         self.num_classes = 1
         self.group_norm = group_norm
 
-        self.model = self.get_model(
-            model_name=self.model_name,
-            pretrained=self.pretrained,
-            group_norm=self.group_norm,
-        )
+        self.model = self.get_model()
 
         self.train_acc = pl.metrics.Accuracy()
         self.valid_acc = pl.metrics.Accuracy()
@@ -243,9 +93,6 @@ class XrayClassifier(pl.LightningModule):
         output = torch.squeeze(output)
 
         pred = torch.sigmoid(output)
-        # pred = torch.squeeze(pred)
-
-        # target = target.float()
 
         loss = F.binary_cross_entropy_with_logits(output, target.float())
         self.log("train_loss", loss)
@@ -261,12 +108,11 @@ class XrayClassifier(pl.LightningModule):
         pred = torch.sigmoid(output)
 
         pred = torch.squeeze(pred)
-        # target = target.float()
 
         loss = F.binary_cross_entropy_with_logits(pred, target.float())
         self.log("val_loss", loss)
         self.log("val_acc_step", self.valid_acc(pred, target))
-        # return loss
+
         return {"pred": pred, "target": target}
 
     def validation_epoch_end(self, validation_step_outputs):
@@ -306,15 +152,14 @@ class XrayClassifier(pl.LightningModule):
         print(f"CosineAnnealingLR T_max epochs = {self.max_epochs}")
         return [optimizer], [scheduler]
 
-    def get_model(
-        self,
-        model_name="tf_efficientnet_b0",
-        pretrained=True,
-        group_norm=False,
-    ):
-        model = timm.create_model(model_name, pretrained, num_classes=self.num_classes)
+    def get_model(self):
+        model = timm.create_model(
+            model_name=self.model_name,
+            pretrained=self.pretrained,
+            num_classes=self.num_classes,
+        )
 
-        if group_norm:
+        if self.group_norm:
             print("BatchNorm changed to GroupNorm")
             set_gn(model)
 
@@ -362,26 +207,14 @@ class XrayDetector(pl.LightningModule):
         self.pretrained_backbone = pretrained_backbone
         self.pretrained_backbone_checkpoint = pretrained_backbone_checkpoint
 
-        # self.model = self.get_model(
-        #     model_name=self.model_name,
-        #     pretrained=self.pretrained,
-        #     anchor_scale=self.anchor_scale,
-        #     aspect_ratios_expand=self.aspect_ratios_expand,
-        #     pretrained_backbone=self.pretrained_backbone,
-        #     image_size=self.image_size,
-        #     freeze_batch_norm=self.freeze_batch_norm,
-        #     group_norm=self.group_norm,
-        #     pretrained_backbone_checkpoint=self.pretrained_backbone_checkpoint,
-        # )
         self.model = self.get_model()
+
         self.evaluator = evaluator
         self.evaluator_alt = evaluator_alt
 
         self.save_hyperparameters()
 
     def forward(self, x):
-        # output = self.model.forward(x)
-        # return output["detections"]
         class_out, box_out = self.model.model(x)
         class_out, box_out, indices, classes = _post_process(
             class_out,
@@ -454,6 +287,7 @@ class XrayDetector(pl.LightningModule):
         self.log("val_loss", loss)
         self.log("val_cls_loss", class_loss)
         self.log("val_box_loss", box_loss)
+
         return loss
 
     def validation_epoch_end(self, validation_step_outputs):
@@ -475,65 +309,6 @@ class XrayDetector(pl.LightningModule):
         scheduler = CosineAnnealingLR(optimizer, T_max=self.max_epochs)
         print(f"CosineAnnealingLR T_max epochs = {self.max_epochs}")
         return [optimizer], [scheduler]
-
-    def get_model_v1(
-        self,
-        model_name="tf_efficientdet_d0",
-        pretrained=True,
-        anchor_scale=4,
-        pretrained_backbone=True,
-        image_size=512,
-        aspect_ratios_expand=False,
-        freeze_batch_norm=False,
-        group_norm=False,
-        pretrained_backbone_checkpoint=None,
-    ):
-        config = get_efficientdet_config(model_name)
-        config.image_size = (image_size, image_size)
-        num_classes = 14
-        config.anchor_scale = anchor_scale
-        if aspect_ratios_expand:
-            config.aspect_ratios = [
-                (1.0, 1.0),
-                (1.4, 0.7),
-                (0.7, 1.4),
-                (1.8, 0.6),
-                (0.6, 1.8),
-            ]
-            pretrained = False
-        if pretrained_backbone_checkpoint is not None:
-            pretrained_backbone = False
-
-        model = create_model_from_config(
-            config=config,
-            bench_task="train",
-            num_classes=num_classes,
-            pretrained=pretrained,
-            checkpoint_path="",
-            checkpoint_ema=False,
-            bench_labeler=True,
-            pretrained_backbone=pretrained_backbone,
-        )
-
-        if freeze_batch_norm:
-            freeze_bn(model)
-
-        if group_norm:
-            print("BatchNorm changed to GroupNorm")
-            set_gn(model)
-
-        if pretrained_backbone_checkpoint is not None:
-            clf = XrayClassifier.load_from_checkpoint(pretrained_backbone_checkpoint)
-            pretrained_dict = {
-                k: v
-                for k, v in clf.model.state_dict().items()
-                if k in model.model.backbone.state_dict()
-            }
-            ret = model.model.backbone.load_state_dict(pretrained_dict)
-            print(ret)
-            print("Pretrained backbone's state_dict loaded.")
-
-        return model
 
     def get_model(self):
         config = get_efficientdet_config(self.model_name)
