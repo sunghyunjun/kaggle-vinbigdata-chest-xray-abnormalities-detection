@@ -24,7 +24,6 @@ class XrayFindingDataset(Dataset):
         super().__init__()
         self.dataset_dir = dataset_dir
         self.transform = transform
-        # self.csv_path = os.path.join(self.dataset_dir, "train_3x_downsampled.csv")
         self.csv_path = os.path.join(self.dataset_dir, "train.csv")
         self.load_train_csv()
 
@@ -62,7 +61,6 @@ class XrayDetectionDataset(Dataset):
         super().__init__()
         self.dataset_dir = dataset_dir
         self.transform = transform
-        # self.csv_path = os.path.join(self.dataset_dir, "train_3x_downsampled.csv")
         self.csv_path = os.path.join(self.dataset_dir, "train.csv")
         self.bboxes_yxyx = bboxes_yxyx
         self.load_train_csv()
@@ -159,7 +157,6 @@ class XrayDetectionDataset(Dataset):
         self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
             self.train_df.y_max - self.train_df.y_min
         )
-        # self.train_df = self.train_df[self.train_df.bbox_area < (4_000_000 / 9)]
         self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
 
         self.image_ids = self.train_df.image_id.unique()
@@ -209,7 +206,6 @@ class XrayDetectionNmsDataset(XrayDetectionDataset):
         self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
             self.train_df.y_max - self.train_df.y_min
         )
-        # self.train_df = self.train_df[self.train_df.bbox_area < (4_000_000 / 9)]
         self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
 
         self.image_ids = self.train_df.image_id.unique()
