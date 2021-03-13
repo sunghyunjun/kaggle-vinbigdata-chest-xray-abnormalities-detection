@@ -134,30 +134,8 @@ class XrayDetectionDataset(Dataset):
         return image, bboxes, labels
 
     def load_train_csv(self):
-        self.train_df = pd.read_csv(
-            self.csv_path,
-            usecols=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
-        )
-
-        self.train_df.drop(
-            self.train_df[self.train_df.class_id == 14].index, inplace=True
-        )
-        self.train_df.reset_index(drop=True, inplace=True)
-        self.train_df = self.train_df.astype(
-            {
-                "class_id": "float32",
-                "x_min": "float32",
-                "y_min": "float32",
-                "x_max": "float32",
-                "y_max": "float32",
-            }
-        )
-
-        # Filter out extreme large bbox data
-        self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
-            self.train_df.y_max - self.train_df.y_min
-        )
-        self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
+        self.preprocess_df()
+        self.filter_extreme_bbox()
 
         self.image_ids = self.train_df.image_id.unique()
 
@@ -180,9 +158,8 @@ class XrayDetectionDataset(Dataset):
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
 
-
-class XrayDetectionNmsDataset(XrayDetectionDataset):
-    def load_train_csv(self):
+    def preprocess_df(self):
+        """Load csv data and preprocess."""
         self.train_df = pd.read_csv(
             self.csv_path,
             usecols=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
@@ -202,11 +179,20 @@ class XrayDetectionNmsDataset(XrayDetectionDataset):
             }
         )
 
-        # Filter out extreme large bbox data
+    def filter_extreme_bbox(self):
+        """Filter out extreme large bbox data."""
         self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
             self.train_df.y_max - self.train_df.y_min
         )
         self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
+
+
+class XrayDetectionNmsDataset(XrayDetectionDataset):
+    """Dataset with duplicate bbox removed using torchvision's batched_nms"""
+
+    def load_train_csv(self):
+        self.preprocess_df()
+        self.filter_extreme_bbox()
 
         self.image_ids = self.train_df.image_id.unique()
 
@@ -273,30 +259,8 @@ class XrayDetectionNmsDataset(XrayDetectionDataset):
 
 class XrayDetectionNmsDataset_V2(XrayDetectionDataset):
     def load_train_csv(self):
-        self.train_df = pd.read_csv(
-            self.csv_path,
-            usecols=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
-        )
-
-        self.train_df.drop(
-            self.train_df[self.train_df.class_id == 14].index, inplace=True
-        )
-        self.train_df.reset_index(drop=True, inplace=True)
-        self.train_df = self.train_df.astype(
-            {
-                "class_id": "float32",
-                "x_min": "float32",
-                "y_min": "float32",
-                "x_max": "float32",
-                "y_max": "float32",
-            }
-        )
-
-        # Filter out extreme large bbox data
-        self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
-            self.train_df.y_max - self.train_df.y_min
-        )
-        self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
+        self.preprocess_df()
+        self.filter_extreme_bbox()
 
         self.image_ids = self.train_df.image_id.unique()
 
@@ -372,30 +336,8 @@ class XrayDetectionNmsDataset_V2(XrayDetectionDataset):
 
 class XrayDetectionWbfDataset(XrayDetectionDataset):
     def load_train_csv(self):
-        self.train_df = pd.read_csv(
-            self.csv_path,
-            usecols=["image_id", "class_id", "x_min", "y_min", "x_max", "y_max"],
-        )
-
-        self.train_df.drop(
-            self.train_df[self.train_df.class_id == 14].index, inplace=True
-        )
-        self.train_df.reset_index(drop=True, inplace=True)
-        self.train_df = self.train_df.astype(
-            {
-                "class_id": "float32",
-                "x_min": "float32",
-                "y_min": "float32",
-                "x_max": "float32",
-                "y_max": "float32",
-            }
-        )
-
-        # Filter out extreme large bbox data
-        self.train_df["bbox_area"] = (self.train_df.x_max - self.train_df.x_min) * (
-            self.train_df.y_max - self.train_df.y_min
-        )
-        self.train_df = self.train_df[self.train_df.bbox_area < 500_000]
+        self.preprocess_df()
+        self.filter_extreme_bbox()
 
         self.image_ids = self.train_df.image_id.unique()
 
