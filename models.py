@@ -1,6 +1,5 @@
 import operator
 
-import timm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +8,9 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import pytorch_lightning as pl
 
-from efficientnet_pytorch import EfficientNet
+# from efficientnet_pytorch import EfficientNet
+import timm
+
 from effdet import create_model, create_model_from_config
 from effdet.config import get_efficientdet_config
 from effdet.bench import _post_process, _batch_detection

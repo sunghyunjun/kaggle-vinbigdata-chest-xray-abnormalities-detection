@@ -37,8 +37,6 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--mode", choices=["classification", "detection"])
 
-    # parser.add_argument("--use_timm", action="store_true")
-
     parser.add_argument(
         "--detector_bbox_filter", default="nms", choices=["raw", "nms", "nms_v2", "wbf"]
     )
@@ -112,13 +110,6 @@ def main():
         print(f"image_size: {image_size}")
         image_size = image_size[1]
 
-        # if args.use_timm:
-        #     image_size = default_cfgs[args.model_name]["input_size"]
-        #     print(f"image_size: {image_size}")
-        #     image_size = image_size[1]
-        # else:
-        #     image_size = EfficientNet.get_image_size(args.model_name)
-
         dm = XrayFindingDataModule(
             dataset_dir=args.dataset_dir,
             batch_size=args.batch_size,
@@ -186,7 +177,6 @@ def main():
             init_lr=args.init_lr,
             weight_decay=args.weight_decay,
             max_epochs=args.max_epochs,
-            # use_timm=args.use_timm,
             group_norm=args.group_norm,
         )
         checkpoint_callback = ModelCheckpoint(
@@ -262,9 +252,8 @@ def main():
     # ----------
     # cli example
     # ----------
-    # python train.py --debug --mode=classification --model_name="efficientnet-b0"
-    # python train.py --debug --mode=classification --model_name="efficientnet_b0" --group_norm
-    # python train.py --debug --mode=classification --model_name="efficientnet_b0" --use_timm
+    # python train.py --debug --mode=classification --model_name="tf_efficientnet_b0"
+    # python train.py --debug --mode=classification --model_name="tf_efficientnet_b0" --group_norm
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0"
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw --group_norm --pretrained_backbone_checkpoint=checkpoint/b0-timm-gn-5folds-0_VIN-293_0.6322.ckpt
