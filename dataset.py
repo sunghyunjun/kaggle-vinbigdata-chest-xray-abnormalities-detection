@@ -56,6 +56,46 @@ class XrayFindingDataset(Dataset):
         self.train_df.drop_duplicates(inplace=True)
 
 
+class NIHFindingDataset(Dataset):
+    def __init__(self, dataset_dir="dataset-nih", transform=None):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.transform = transform
+        self.csv_path = os.path.join(self.dataset_dir, "Data_Entry_2017_jpg.csv")
+        self.load_train_csv()
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        image_id, label = self.train_df.iloc[index, :][["image_id", "label"]]
+        image_path = os.path.join(self.dataset_dir, "images", image_id)
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        if self.transform is not None:
+            image = self.transform(image=image)["image"]
+        else:
+            image = A.Compose([A.Normalize(), ToTensorV2()])(image=image)["image"]
+
+        label = torch.as_tensor(label)
+
+        return image, label
+
+    def __len__(self) -> int:
+        return len(self.train_df)
+
+    def load_train_csv(self):
+        self.train_df = pd.read_csv(
+            self.csv_path, usecols=["Image Index", "Finding Labels"]
+        )
+        self.train_df.rename(columns={"Image Index": "image_id"}, inplace=True)
+
+        # Label 0: No finding, Label 1: Finding
+        self.train_df["label"] = np.where(
+            self.train_df["Finding Labels"] == "No Finding", 0, 1
+        )
+        del self.train_df["Finding Labels"]
+        # self.train_df.drop_duplicates(inplace=True)
+
+
 class XrayDetectionDataset(Dataset):
     def __init__(self, dataset_dir="dataset-jpg", transform=None, bboxes_yxyx=True):
         super().__init__()
@@ -422,15 +462,11 @@ class XrayTestDataset(Dataset):
         else:
             self.image_ids = os.listdir(self.testset_dir)
 
-    # def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-    def __getitem__(self, index: int):  # -> Tuple[torch.Tensor, str]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, str, int, int]:
         image_id = self.image_ids[index]
         image_path = os.path.join(self.testset_dir, image_id)
 
         image = read_xray(image_path, downscale_factor=1)
-        # image = cv2.imread(image_path)
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         height, width, _ = image.shape
 
