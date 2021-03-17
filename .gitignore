@@ -7,10 +7,12 @@ lightning_logs*
 
 dataset/
 dataset-jpg/
+dataset-nih/
 notebook/
 
 dataset-jpg.zip
 dataset-jpg-3x.zip
+nih-chest-xrays-600-jpg-dataset.zip
 kaggle.json
 checkpoint/
 submission.csv
