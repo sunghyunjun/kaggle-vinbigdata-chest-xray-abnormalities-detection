@@ -4,15 +4,18 @@ import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
 
 import cv2
+import numpy as np
+import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold
 import pytorch_lightning as pl
 
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, ConcatDataset
 
 from dataset import (
     XrayFindingDataset,
+    NIHFindingDataset,
     XrayDetectionDataset,
     XrayTestDataset,
     XrayDetectionNmsDataset,
@@ -128,6 +131,63 @@ class XrayFindingDataModule(pl.LightningDataModule):
             valid_fold.append(valid_index)
 
         return train_fold[fold_index], valid_fold[fold_index]
+
+
+class XrayFindingConcatDataModule(XrayFindingDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        dataset_nih_dir="dataset-nih",
+        fold_splits=10,
+        fold_index=0,
+        batch_size=32,
+        num_workers=2,
+        image_size=512,
+    ):
+        super().__init__(
+            dataset_dir=dataset_dir,
+            fold_splits=fold_splits,
+            fold_index=fold_index,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            image_size=image_size,
+        )
+        self.dataset_nih_dir = dataset_nih_dir
+        print("Train on VBD & NIH Chest X-Rays Concat Dataset")
+
+    def setup(self, stage=None):
+        self.train_vbd_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.train_nih_dataset = NIHFindingDataset(
+            self.dataset_nih_dir, transform=self.get_train_transform()
+        )
+
+        self.valid_vbd_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+        self.valid_nih_dataset = NIHFindingDataset(
+            self.dataset_nih_dir, transform=self.get_valid_transform()
+        )
+
+        self.train_dataset = ConcatDataset(
+            [self.train_vbd_dataset, self.train_nih_dataset]
+        )
+        self.valid_dataset = ConcatDataset(
+            [self.valid_vbd_dataset, self.valid_nih_dataset]
+        )
+
+        self.train_df = pd.concat(
+            [self.train_vbd_dataset.train_df, self.train_nih_dataset.train_df],
+            axis=0,
+        )
+
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
 
 
 class XrayDetectionDataModule(pl.LightningDataModule):
