@@ -13,8 +13,10 @@ class XrayEvaluator(Evaluator):
         distributed=False,
         pred_yxyx=False,
         evaluator_cls=tfm_eval.PascalDetectionEvaluator,
+        include_nofinding=False,
     ):
         super().__init__(distributed=distributed, pred_yxyx=pred_yxyx)
+        self.include_nofinding = include_nofinding
         self._evaluator = evaluator_cls(
             categories=self.get_categories(), matching_iou_threshold=0.4
         )
@@ -61,6 +63,11 @@ class XrayEvaluator(Evaluator):
             {"id": 13, "name": "Pulmonary fibrosis"},
         ]
 
+        if self.include_nofinding:
+            original_categories.append(
+                {"id": 14, "name": "No finding"},
+            )
+
         # change class label 0-index 0~13 to non-zero, 1-index 1~14
         categories = [
             {"id": cat["id"] + 1, "name": cat["name"]} for cat in original_categories
@@ -70,9 +77,10 @@ class XrayEvaluator(Evaluator):
 
 
 class ZFTurboEvaluator(object):
-    def __init__(self, image_size, iou_thr=0.4):
+    def __init__(self, image_size, iou_thr=0.4, include_nofinding=False):
         self.image_size = image_size
         self.iou_thr = iou_thr
+        self.include_nofinding = include_nofinding
         self.categories = self.get_categories()
         self.det_ids: List[object] = []
         self.det_list: List[object] = []
@@ -196,6 +204,11 @@ class ZFTurboEvaluator(object):
             {"id": 12, "name": "Pneumothorax"},
             {"id": 13, "name": "Pulmonary fibrosis"},
         ]
+
+        if self.include_nofinding:
+            original_categories.append(
+                {"id": 14, "name": "No finding"},
+            )
 
         # change class label 0-index 0~13 to non-zero, 1-index 1~14
         categories = [
