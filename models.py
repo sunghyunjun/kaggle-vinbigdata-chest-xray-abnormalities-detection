@@ -50,7 +50,8 @@ def set_gn(model):
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.BatchNorm2d):
             bn = operator.attrgetter(name)(model)
-            gn = torch.nn.GroupNorm(8, bn.num_features)
+            # gn = torch.nn.GroupNorm(8, bn.num_features)
+            gn = torch.nn.GroupNorm(bn.num_features // 8, bn.num_features)
             rsetattr(model, name, gn)
 
 
@@ -192,6 +193,7 @@ class XrayDetector(pl.LightningModule):
         pretrained_backbone_checkpoint=None,
         evaluator: XrayEvaluator = None,
         evaluator_alt: ZFTurboEvaluator = None,
+        max_det_per_image=100,
     ):
         super().__init__()
         self.model_name = model_name
@@ -202,6 +204,7 @@ class XrayDetector(pl.LightningModule):
         self.num_classes = num_classes
         self.anchor_scale = anchor_scale
         self.aspect_ratios_expand = aspect_ratios_expand
+        self.max_det_per_image = max_det_per_image
         self.freeze_batch_norm = freeze_batch_norm
         self.group_norm = group_norm
         self.pretrained = pretrained
@@ -314,7 +317,10 @@ class XrayDetector(pl.LightningModule):
     def get_model(self):
         config = get_efficientdet_config(self.model_name)
         config.image_size = (self.image_size, self.image_size)
+        print(f"detector_image_size: {config.image_size}")
         config.anchor_scale = self.anchor_scale
+        config.max_det_per_image = self.max_det_per_image
+        print(f"max_det_per_image: {self.max_det_per_image}")
 
         if self.aspect_ratios_expand:
             config.aspect_ratios = [
