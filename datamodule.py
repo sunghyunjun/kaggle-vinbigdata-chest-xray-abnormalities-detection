@@ -18,9 +18,14 @@ from dataset import (
     NIHFindingDataset,
     XrayDetectionDataset,
     XrayTestDataset,
+    XrayTestEnsembleDataset,
     XrayDetectionNmsDataset,
     XrayDetectionNmsDataset_V2,
     XrayDetectionWbfDataset,
+    XrayDetectionAllDataset,
+    XrayDetectionAllNmsDataset,
+    XrayDetectionAllNmsDataset_V2,
+    XrayDetectionAllWbfDataset,
 )
 
 
@@ -133,7 +138,7 @@ class XrayFindingDataModule(pl.LightningDataModule):
         return train_fold[fold_index], valid_fold[fold_index]
 
 
-class XrayFindingConcatDataModule(XrayFindingDataModule):
+class XrayFindingConcatDataModule_V1(XrayFindingDataModule):
     def __init__(
         self,
         dataset_dir="dataset-jpg",
@@ -188,6 +193,53 @@ class XrayFindingConcatDataModule(XrayFindingDataModule):
 
         self.train_dataset = Subset(self.train_dataset, self.train_index)
         self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
+class XrayFindingConcatDataModule(XrayFindingDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        dataset_nih_dir="dataset-nih",
+        fold_splits=10,
+        fold_index=0,
+        batch_size=32,
+        num_workers=2,
+        image_size=512,
+    ):
+        super().__init__(
+            dataset_dir=dataset_dir,
+            fold_splits=fold_splits,
+            fold_index=fold_index,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            image_size=image_size,
+        )
+        self.dataset_nih_dir = dataset_nih_dir
+        print("Train on VBD & NIH Chest X-Rays Concat Dataset")
+
+    def setup(self, stage=None):
+        self.train_vbd_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_vbd_dataset = XrayFindingDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+        self.train_df = self.train_vbd_dataset.train_df
+        self.train_vbd_index, self.valid_vbd_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_vbd_dataset = Subset(self.train_vbd_dataset, self.train_vbd_index)
+        self.valid_vbd_dataset = Subset(self.valid_vbd_dataset, self.valid_vbd_index)
+
+        self.train_nih_dataset = NIHFindingDataset(
+            self.dataset_nih_dir, transform=self.get_train_transform()
+        )
+
+        self.train_dataset = ConcatDataset(
+            [self.train_vbd_dataset, self.train_nih_dataset]
+        )
+        self.valid_dataset = self.valid_vbd_dataset
 
 
 class XrayDetectionDataModule(pl.LightningDataModule):
@@ -408,6 +460,106 @@ class XrayDetectionWbfDataModule(XrayDetectionDataModule):
         self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
 
 
+class XrayDetectionAllDataModule(XrayDetectionDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionAllDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+        self.valid_dataset = XrayDetectionAllDataset(
+            self.dataset_dir, transform=self.get_valid_transform()
+        )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
+class XrayDetectionAllNmsDataModule(XrayDetectionAllDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionAllNmsDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllNmsDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
+class XrayDetectionAllNmsDataModule_V2(XrayDetectionAllDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionAllNmsDataset_V2(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllNmsDataset_V2(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
+class XrayDetectionAllWbfDataModule(XrayDetectionAllDataModule):
+    def setup(self, stage=None):
+        self.train_dataset = XrayDetectionAllWbfDataset(
+            self.dataset_dir, transform=self.get_train_transform()
+        )
+
+        if self.valid_filter:
+            print("Apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllWbfDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+        else:
+            print("Not apply bbox filter on valid_dataset")
+            self.valid_dataset = XrayDetectionAllDataset(
+                self.dataset_dir, transform=self.get_valid_transform()
+            )
+
+        self.image_ids = self.train_dataset.image_ids
+        self.most_class_ids = self.train_dataset.most_class_ids
+        self.train_index, self.valid_index = self.make_fold_index(
+            n_splits=self.fold_splits, fold_index=self.fold_index
+        )
+
+        self.train_dataset = Subset(self.train_dataset, self.train_index)
+        self.valid_dataset = Subset(self.valid_dataset, self.valid_index)
+
+
 class XrayTestDataModule(pl.LightningDataModule):
     def __init__(
         self,
@@ -450,3 +602,37 @@ class XrayTestDataModule(pl.LightningDataModule):
                 ToTensorV2(),
             ]
         )
+
+
+class XrayTestEnsembleDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        dataset_dir="dataset-jpg",
+        image_ids=None,
+        batch_size=32,
+        num_workers=2,
+        image_size_list=[1024],
+    ):
+        super().__init__()
+        self.dataset_dir = dataset_dir
+        self.image_ids = image_ids
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.image_size_list = image_size_list
+
+    def setup(self, stage=None):
+        self.test_dataset = XrayTestEnsembleDataset(
+            dataset_dir=self.dataset_dir,
+            image_ids=self.image_ids,
+            image_size_list=self.image_size_list,
+        )
+
+    def test_dataloader(self):
+        test_loader = DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+        return test_loader
