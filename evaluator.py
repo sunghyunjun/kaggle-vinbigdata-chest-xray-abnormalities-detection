@@ -14,6 +14,7 @@ class XrayEvaluator(Evaluator):
         pred_yxyx=False,
         evaluator_cls=tfm_eval.PascalDetectionEvaluator,
         include_nofinding=False,
+        downconv=False,
     ):
         super().__init__(distributed=distributed, pred_yxyx=pred_yxyx)
         self.include_nofinding = include_nofinding
@@ -22,6 +23,7 @@ class XrayEvaluator(Evaluator):
         )
         self._eval_metric_name = self._evaluator._metric_names[0]
         self._dataset = dataset
+        self.downconv = downconv
 
     def reset(self):
         self._evaluator.clear()
@@ -31,9 +33,19 @@ class XrayEvaluator(Evaluator):
     def evaluate(self):
         for img_idx, img_dets in zip(self.img_indices, self.predictions):
             sample = self._dataset.__getitem__(img_idx)
+
+            if self.downconv:
+                sample_bboxes = sample["bboxes"].numpy() / 2
+            else:
+                sample_bboxes = sample["bboxes"].numpy()
+
+            sample_labels = sample["labels"].numpy()
+
             gt = {
-                "bbox": sample["bboxes"].numpy(),
-                "cls": sample["labels"].numpy(),
+                # "bbox": sample["bboxes"].numpy(),
+                # "cls": sample["labels"].numpy(),
+                "bbox": sample_bboxes,
+                "cls": sample_labels,
             }
             self._evaluator.add_single_ground_truth_image_info(img_idx, gt)
 

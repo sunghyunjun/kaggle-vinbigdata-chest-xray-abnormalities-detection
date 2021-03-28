@@ -55,6 +55,52 @@ def set_gn(model):
             rsetattr(model, name, gn)
 
 
+class Compressor(nn.Module):
+    """Compress input 2x or 3x."""
+
+    def __init__(
+        self,
+        in_channels=3,
+        conv_channels=8,
+        downscale_factor=2,
+    ):
+        assert (
+            downscale_factor == 2 or downscale_factor == 3
+        ), "Only support 2x or 3x compression."
+
+        super().__init__()
+        self.in_channels = in_channels
+        self.conv_channels = conv_channels
+        self.downscale_factor = downscale_factor
+
+        self.avgpool = nn.AvgPool2d(self.downscale_factor)
+        self.downconv = nn.Sequential(
+            nn.Conv2d(
+                self.in_channels,
+                self.conv_channels,
+                kernel_size=5,
+                stride=self.downscale_factor,
+                padding=2,
+                bias=False,
+            ),
+            nn.BatchNorm2d(self.conv_channels),
+            nn.ReLU(),
+        )
+        self.conv = nn.Conv2d(
+            self.in_channels + self.conv_channels,
+            self.in_channels,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            bias=False,
+        )
+
+    def forward(self, x):
+        x = torch.cat((self.avgpool(x), self.downconv(x)), dim=1)
+        x = self.conv(x)
+        return x
+
+
 class XrayClassifier(pl.LightningModule):
     def __init__(
         self,
@@ -194,6 +240,7 @@ class XrayDetector(pl.LightningModule):
         evaluator: XrayEvaluator = None,
         evaluator_alt: ZFTurboEvaluator = None,
         max_det_per_image=100,
+        downconv=False,
     ):
         super().__init__()
         self.model_name = model_name
@@ -216,9 +263,15 @@ class XrayDetector(pl.LightningModule):
         self.evaluator = evaluator
         self.evaluator_alt = evaluator_alt
 
+        self.downconv = downconv
+        self.compressor = Compressor() if self.downconv else None
+
         self.save_hyperparameters()
 
     def forward(self, x):
+        if self.downconv:
+            x = self.compressor(x)
+
         class_out, box_out = self.model.model(x)
         class_out, box_out, indices, classes = _post_process(
             class_out,
@@ -243,6 +296,11 @@ class XrayDetector(pl.LightningModule):
         image = batch["image"]
         boxes = batch["bboxes"]
         labels = batch["labels"]
+
+        if self.downconv:
+            image = self.compressor(image)
+            boxes = [x / 2 for x in boxes]
+
         output = self.model(image, {"bbox": boxes, "cls": labels})
         loss = output["loss"]
         class_loss = output["class_loss"]
@@ -258,6 +316,10 @@ class XrayDetector(pl.LightningModule):
         image = batch["image"]
         boxes = batch["bboxes"]
         labels = batch["labels"]
+
+        if self.downconv:
+            image = self.compressor(image)
+            boxes = [x / 2 for x in boxes]
 
         output = self.model(
             image, {"bbox": boxes, "cls": labels, "img_scale": None, "img_size": None}

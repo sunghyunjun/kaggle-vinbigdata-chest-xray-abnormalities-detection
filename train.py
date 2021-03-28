@@ -41,7 +41,8 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument(
-        "--mode", choices=["classification", "detection", "detection_all"]
+        "--mode",
+        choices=["classification", "detection", "detection_all"],
     )
 
     parser.add_argument("--clf_dataset", default="vbd", choices=["vbd", "concat"])
@@ -86,6 +87,8 @@ def main():
         type=int,
         choices=[x * 128 for x in range(4, 13)],
     )
+    parser.add_argument("--downconv", action="store_true")
+
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--fold_splits", default=10, type=int)
@@ -149,7 +152,15 @@ def main():
     elif args.mode == "detection":
         # d0: 512, d1: 640, d2: 768, d3: 896
         # d4: 1024, d5: 1280, d6: 1280, d7: 1536
-        # image_size = args.detector_image_size
+        det_image_size = args.detector_image_size
+        if args.downconv:
+            det_image_size *= 2
+            print(
+                f"downconv used\n"
+                f"dataset  image size: {det_image_size}\n"
+                f"detector image size: {args.detector_image_size}\n"
+            )
+
         if args.detector_bbox_filter == "nms":
             print("Detector's bbox filter: NMS")
             dm = XrayDetectionNmsDataModule(
@@ -158,7 +169,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "nms_v2":
@@ -169,7 +180,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "wbf":
@@ -180,7 +191,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         else:
@@ -191,12 +202,16 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
             )
     elif args.mode == "detection_all":
         # d0: 512, d1: 640, d2: 768, d3: 896
         # d4: 1024, d5: 1280, d6: 1280, d7: 1536
         # image_size = args.detector_image_size
+        det_image_size = args.detector_image_size
+        if args.downconv:
+            det_image_size *= 2
+
         if args.detector_bbox_filter == "nms":
             print("Detector's bbox filter: NMS")
             dm = XrayDetectionAllNmsDataModule(
@@ -205,7 +220,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "nms_v2":
@@ -216,7 +231,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         elif args.detector_bbox_filter == "wbf":
@@ -227,7 +242,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
                 valid_filter=args.detector_valid_bbox_filter,
             )
         else:
@@ -238,7 +253,7 @@ def main():
                 num_workers=args.num_workers,
                 fold_splits=args.fold_splits,
                 fold_index=args.fold_index,
-                image_size=args.detector_image_size,
+                image_size=det_image_size,
             )
 
     # ----------
@@ -266,7 +281,9 @@ def main():
 
         include_nofinding = False if args.mode == "detection" else True
         evaluator = XrayEvaluator(
-            dataset=dm.valid_dataset, include_nofinding=include_nofinding
+            dataset=dm.valid_dataset,
+            include_nofinding=include_nofinding,
+            downconv=args.downconv,
         )
 
         evaluator_alt = (
@@ -295,6 +312,7 @@ def main():
             group_norm=args.group_norm,
             pretrained_backbone_checkpoint=args.pretrained_backbone_checkpoint,
             max_det_per_image=args.max_det_per_image,
+            downconv=args.downconv,
         )
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
@@ -348,6 +366,7 @@ def main():
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=nms
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=nms_v2
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw --group_norm --pretrained_backbone_checkpoint=checkpoint/b0-timm-gn-5folds-0_VIN-293_0.6322.ckpt
+    # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw --downconv
     # python train.py --debug --mode=detection_all --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw
 
 
