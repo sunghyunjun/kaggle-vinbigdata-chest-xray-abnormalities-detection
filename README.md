@@ -90,7 +90,7 @@ All models were trained on Colab Pro's V100 16GB single GPU.
 |d5|896|4 of 5|3|3e-4|1e-3|0.4522|
 |d5|1024|single|2|2e-4|1e-3|0.4462|
 
-### One-state approach
+### One-stage approach
 
 - 15-class detector, total 2 models
 
