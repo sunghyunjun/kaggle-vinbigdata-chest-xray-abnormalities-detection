@@ -95,7 +95,7 @@ All models were trained on Colab Pro's V100 16GB single GPU.
 - 15-class detector, total 2 models
 
 |model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 |d4|896|2 of 5|4|4e-4|1e-3|0.4546|
 
 At batch size < 4, the mAP result was poor. The larger the image size, the better the mAP, but no further training was possible.
@@ -267,7 +267,7 @@ torchvision의 nms는 bbox의 score가 동일할 경우 결과값 순서에 있�
 - 14-class detector : EfficientDet, total 18 models
 
 |model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 |d3|1024|single|3|3e-4|1e-3|0.4545|
 |d4|896|5 of 5|4|4e-4|1e-4|0.4541|
 |d4|896|single|4|4e-4|1e-3|0.4606|
@@ -281,7 +281,7 @@ torchvision의 nms는 bbox의 score가 동일할 경우 결과값 순서에 있�
 - 15-class detector, total 2 models
 
 |model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 |d4|896|2 of 5|4|4e-4|1e-3|0.4546|
 
 batch size < 4 에서는 mAP 결과가 좋지 않았습니다. 이미지 크기가 클수록 mAP 값이 좋아지는 경향이 있었으나 그 이상의 훈련을 하지 못하였습니다.
