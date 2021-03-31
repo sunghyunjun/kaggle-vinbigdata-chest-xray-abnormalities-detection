@@ -81,7 +81,7 @@ All models were trained on Colab Pro's V100 16GB single GPU.
 - 14-class detector : EfficientDet, total 18 models
 
 |model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 |d3|1024|single|3|3e-4|1e-3|0.4545|
 |d4|896|5 of 5|4|4e-4|1e-4|0.4541|
 |d4|896|single|4|4e-4|1e-3|0.4606|
