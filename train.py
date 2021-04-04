@@ -2,8 +2,6 @@ from argparse import ArgumentParser
 
 import os
 
-# import random
-
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import NeptuneLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
@@ -50,29 +48,21 @@ def main():
         "--detector_bbox_filter", default="nms", choices=["raw", "nms", "nms_v2", "wbf"]
     )
     parser.add_argument("--detector_valid_bbox_filter", action="store_true")
-
     parser.add_argument("--freeze_batch_norm", action="store_true")
     parser.add_argument("--group_norm", action="store_true")
-
     parser.add_argument("--evaluator_alt", action="store_true")
-
     parser.add_argument("--pretrained_backbone_checkpoint", default=None)
     parser.add_argument("--resume_from_checkpoint", default=None)
-
     parser.add_argument("--dataset_dir", default="dataset-jpg")
     parser.add_argument("--dataset_nih_dir", default="dataset-nih")
     parser.add_argument("--default_root_dir", default=os.getcwd())
     parser.add_argument("--lr_finder", action="store_true")
-
     parser.add_argument("--neptune_logger", action="store_true")
     parser.add_argument("--neptune_project", default=None)
     parser.add_argument("--experiment_name", default=None)
-
     parser.add_argument("--gpus", default=None, type=int)
     parser.add_argument("--precision", default=32, type=int)
-    # parser.add_argument("--amp_level", default="O2", choices=["O1", "O2", "O3"])
     parser.add_argument("--accumulate_grad_batches", default=1, type=int)
-
     parser.add_argument("--model_name")
 
     # b0: 224, b1: 240, b2: 260, b3: 300
@@ -87,8 +77,8 @@ def main():
         type=int,
         choices=[x * 128 for x in range(4, 13)],
     )
-    parser.add_argument("--downconv", action="store_true")
 
+    parser.add_argument("--downconv", action="store_true")
     parser.add_argument("--batch_size", default=4, type=int)
     parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--fold_splits", default=10, type=int)
@@ -97,10 +87,8 @@ def main():
     parser.add_argument("--anchor_scale", default=4, type=int)
     parser.add_argument("--aspect_ratios_expand", action="store_true")
     parser.add_argument("--max_det_per_image", default=100, type=int)
-
     parser.add_argument("--init_lr", default=1e-4, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float)
-
     parser.add_argument("--progress_bar_refresh_rate", default=1, type=int)
 
     args = parser.parse_args()
@@ -125,11 +113,6 @@ def main():
         # resolution
         # b0: 224, b1: 240, b2: 260, b3: 300
         # b4: 380, b5: 456, b6: 528, b7: 600, b8: 672
-        # image_size = default_cfgs[args.model_name]["input_size"]
-        # print(f"image_size: {image_size}")
-        # image_size = image_size[1]
-        # image_size = args.clf_image_size
-
         if args.clf_dataset == "concat":
             dm = XrayFindingConcatDataModule(
                 dataset_dir=args.dataset_dir,
@@ -207,7 +190,6 @@ def main():
     elif args.mode == "detection_all":
         # d0: 512, d1: 640, d2: 768, d3: 896
         # d4: 1024, d5: 1280, d6: 1280, d7: 1536
-        # image_size = args.detector_image_size
         det_image_size = args.detector_image_size
         if args.downconv:
             det_image_size *= 2
@@ -365,7 +347,6 @@ def main():
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=nms
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=nms_v2
-    # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw --group_norm --pretrained_backbone_checkpoint=checkpoint/b0-timm-gn-5folds-0_VIN-293_0.6322.ckpt
     # python train.py --debug --mode=detection --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw --downconv
     # python train.py --debug --mode=detection_all --model_name="tf_efficientdet_d0" --detector_bbox_filter=raw
 

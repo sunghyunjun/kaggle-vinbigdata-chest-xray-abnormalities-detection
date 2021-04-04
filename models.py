@@ -8,7 +8,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import pytorch_lightning as pl
 
-# from efficientnet_pytorch import EfficientNet
 import timm
 
 from effdet import create_model, create_model_from_config

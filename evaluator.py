@@ -42,8 +42,6 @@ class XrayEvaluator(Evaluator):
             sample_labels = sample["labels"].numpy()
 
             gt = {
-                # "bbox": sample["bboxes"].numpy(),
-                # "cls": sample["labels"].numpy(),
                 "bbox": sample_bboxes,
                 "cls": sample_labels,
             }

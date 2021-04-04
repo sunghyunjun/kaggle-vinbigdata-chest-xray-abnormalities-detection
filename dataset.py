@@ -336,18 +336,6 @@ class XrayDetectionNmsDataset(XrayDetectionDataset):
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
 
-    # def get_bbox_nms(self, df, image_id, iou_threshold=0.4):
-    #     boxes = torch.as_tensor(
-    #         df[["x_min", "y_min", "x_max", "y_max"]][
-    #             df.image_id == image_id
-    #         ].to_numpy(),
-    #         dtype=torch.float32,
-    #     )
-    #     idx = torch.as_tensor(df["class_id"][df.image_id == image_id].to_numpy())
-    #     scores = torch.ones(idx.size(), dtype=torch.float32)
-    #     keep = batched_nms(boxes, scores, idx, iou_threshold=iou_threshold)
-    #     return boxes[keep], idx[keep]
-
 
 class XrayDetectionNmsDataset_V2(XrayDetectionDataset):
     def load_train_csv(self):
@@ -405,27 +393,6 @@ class XrayDetectionNmsDataset_V2(XrayDetectionDataset):
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
 
-    # def get_bbox_nms(self, df, image_id, iou_threshold=0.4, skip_box_thr=0.0):
-    #     boxes = df[["x_min", "y_min", "x_max", "y_max"]][
-    #         df.image_id == image_id
-    #     ].to_numpy()
-    #     idx = df["class_id"][df.image_id == image_id].to_numpy()
-    #     scores = np.ones(len(idx), dtype=np.float32)
-
-    #     boxes_max = np.max(boxes)
-    #     boxes_normalized = boxes / boxes_max
-
-    #     boxes_nms, _, labels_nms = non_maximum_weighted(
-    #         [boxes_normalized],
-    #         [scores],
-    #         [idx],
-    #         weights=None,
-    #         iou_thr=iou_threshold,
-    #         skip_box_thr=skip_box_thr,
-    #     )
-    #     boxes_nms *= boxes_max
-    #     return boxes_nms, labels_nms
-
 
 class XrayDetectionWbfDataset(XrayDetectionDataset):
     def load_train_csv(self):
@@ -482,27 +449,6 @@ class XrayDetectionWbfDataset(XrayDetectionDataset):
             class_ids = self.train_data[image_id][:, 0].astype(np.int64)
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
-
-    # def get_bbox_wbf(self, df, image_id, iou_threshold=0.6, skip_box_thr=0.0):
-    #     boxes = df[["x_min", "y_min", "x_max", "y_max"]][
-    #         df.image_id == image_id
-    #     ].to_numpy()
-    #     idx = df["class_id"][df.image_id == image_id].to_numpy()
-    #     scores = np.ones(len(idx), dtype=np.float32)
-
-    #     boxes_max = np.max(boxes)
-    #     boxes_normalized = boxes / boxes_max
-
-    #     boxes_wbf, _, labels_wbf = weighted_boxes_fusion(
-    #         [boxes_normalized],
-    #         [scores],
-    #         [idx],
-    #         weights=None,
-    #         iou_thr=iou_threshold,
-    #         skip_box_thr=skip_box_thr,
-    #     )
-    #     boxes_wbf *= boxes_max
-    #     return boxes_wbf, labels_wbf
 
 
 class XrayDetectionAllDataset(XrayDetectionDataset):
@@ -617,18 +563,6 @@ class XrayDetectionAllNmsDataset(XrayDetectionAllDataset):
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
 
-    # def get_bbox_nms(self, df, image_id, iou_threshold=0.4):
-    #     boxes = torch.as_tensor(
-    #         df[["x_min", "y_min", "x_max", "y_max"]][
-    #             df.image_id == image_id
-    #         ].to_numpy(),
-    #         dtype=torch.float32,
-    #     )
-    #     idx = torch.as_tensor(df["class_id"][df.image_id == image_id].to_numpy())
-    #     scores = torch.ones(idx.size(), dtype=torch.float32)
-    #     keep = batched_nms(boxes, scores, idx, iou_threshold=iou_threshold)
-    #     return boxes[keep], idx[keep]
-
 
 class XrayDetectionAllNmsDataset_V2(XrayDetectionAllDataset):
     def load_train_csv(self):
@@ -686,27 +620,6 @@ class XrayDetectionAllNmsDataset_V2(XrayDetectionAllDataset):
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
 
-    # def get_bbox_nms(self, df, image_id, iou_threshold=0.4, skip_box_thr=0.0):
-    #     boxes = df[["x_min", "y_min", "x_max", "y_max"]][
-    #         df.image_id == image_id
-    #     ].to_numpy()
-    #     idx = df["class_id"][df.image_id == image_id].to_numpy()
-    #     scores = np.ones(len(idx), dtype=np.float32)
-
-    #     boxes_max = np.max(boxes)
-    #     boxes_normalized = boxes / boxes_max
-
-    #     boxes_nms, _, labels_nms = non_maximum_weighted(
-    #         [boxes_normalized],
-    #         [scores],
-    #         [idx],
-    #         weights=None,
-    #         iou_thr=iou_threshold,
-    #         skip_box_thr=skip_box_thr,
-    #     )
-    #     boxes_nms *= boxes_max
-    #     return boxes_nms, labels_nms
-
 
 class XrayDetectionAllWbfDataset(XrayDetectionAllDataset):
     def load_train_csv(self):
@@ -763,27 +676,6 @@ class XrayDetectionAllWbfDataset(XrayDetectionAllDataset):
             class_ids = self.train_data[image_id][:, 0].astype(np.int64)
             class_ids_counts = np.bincount(class_ids)
             self.most_class_ids.append(np.argmax(class_ids_counts))
-
-    # def get_bbox_wbf(self, df, image_id, iou_threshold=0.6, skip_box_thr=0.0):
-    #     boxes = df[["x_min", "y_min", "x_max", "y_max"]][
-    #         df.image_id == image_id
-    #     ].to_numpy()
-    #     idx = df["class_id"][df.image_id == image_id].to_numpy()
-    #     scores = np.ones(len(idx), dtype=np.float32)
-
-    #     boxes_max = np.max(boxes)
-    #     boxes_normalized = boxes / boxes_max
-
-    #     boxes_wbf, _, labels_wbf = weighted_boxes_fusion(
-    #         [boxes_normalized],
-    #         [scores],
-    #         [idx],
-    #         weights=None,
-    #         iou_thr=iou_threshold,
-    #         skip_box_thr=skip_box_thr,
-    #     )
-    #     boxes_wbf *= boxes_max
-    #     return boxes_wbf, labels_wbf
 
 
 class XrayTestDataset(Dataset):
