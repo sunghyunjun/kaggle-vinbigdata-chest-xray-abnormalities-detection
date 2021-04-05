@@ -28,7 +28,7 @@ StratifiedKFold를 사용하였으며 5 fold 로 데이터 세트를 구성하�
 
 train set과 validation set 모두 중첩된 bboxes를 nms를 이용하여 정제하였습니다. torchvision의 batched_nms, ZFTurbo의 nms, wbf 를 사용하여 테스트를 하였습니다.
 
-14-class Efficientdet d4 896px 30 epochs without classifier
+14-class Efficientdet d4 896px 30 epochs without classifier, local cv on positive image only
 ||cv(mAP@iou=0.4)|public LB|private LB|
 |-|-|-|-|
 |torchvision batched_nms|0.4317|0.155|0.168|
@@ -78,25 +78,25 @@ torchvision의 nms는 bbox의 score가 동일할 경우 결과값 순서에 있�
 |b5|456|single|16|1.0e-4|1.0e-4|0.9557|0.9927|
 |b5|1024|single|4|2.5e-5|1.0e-4|0.9577|0.9936|
 
-- 14-class detector : EfficientDet, total 18 models
+- 14-class detector : EfficientDet with 2-class classifier, total 18 models, local cv on positive image only
 
-|model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|d3|1024|single|3|3e-4|1e-3|0.4545|
-|d4|896|5 of 5|4|4e-4|1e-4|0.4541|
-|d4|896|single|4|4e-4|1e-3|0.4606|
-|d4|1024|single|3|3e-4|1e-3|0.4545|
-|d5|768|5 of 5|4|4e-4|1e-3|0.4472|
-|d5|896|4 of 5|3|3e-4|1e-3|0.4522|
-|d5|1024|single|2|2e-4|1e-3|0.4462|
+|model|image size(px)|folds|batch size|init lr|weight decay|cv(mAP@iou=0.4)|public LB|private LB|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|d3|1024|single|3|3e-4|1e-3|0.4545|0.209|0.250|
+|d4|896|5 of 5|4|4e-4|1e-4|0.4541|0.218|0.250|
+|d4|896|single|4|4e-4|1e-3|0.4606|0.257|0.247|
+|d4|1024|single|3|3e-4|1e-3|0.4545|0.228|0.249|
+|d5|768|5 of 5|4|4e-4|1e-3|0.4472|0.225|0.253|
+|d5|896|4 of 5|3|3e-4|1e-3|0.4522|0.214|0.250|
+|d5|1024|single|2|2e-4|1e-3|0.4462|0.214|0.232|
 
 ### 1단계 방식
 
-- 15-class detector, total 2 models
+- 15-class detector, total 2 models, local cv on positive image only
 
-|model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|d4|896|2 of 5|4|4e-4|1e-3|0.4546|
+|model|image size(px)|folds|batch size|init lr|weight decay|cv(mAP@iou=0.4)|public LB|private LB|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|d4|896|2 of 5|4|4e-4|1e-3|0.4546|0.230|0.246|
 
 batch size < 4 에서는 mAP 결과가 좋지 않았습니다. 이미지 크기가 클수록 mAP 값이 좋아지는 경향이 있었으나 그 이상의 훈련을 하지 못하였습니다.
 

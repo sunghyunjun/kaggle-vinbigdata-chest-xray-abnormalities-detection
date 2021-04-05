@@ -2,7 +2,19 @@
 
 Code for 91th place solution in [Kaggle VinBigData Chest X-ray Abnormalities Detection](https://www.kaggle.com/c/vinbigdata-chest-xray-abnormalities-detection).
 
-*Read this in other languages: [English](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md), [한국어](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.ko.md)*
+- [Code Overview](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#code-overview)
+
+  - [Prepare dataset](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#prepare-dataset)
+
+  - [Train](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#train)
+
+  - [Submission Notebook](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#submission-notebook)
+
+- [Solution Summary](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#solution-summary)
+
+- *Read Solution Summary in other languages: [English](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#solution-summary), [한국어](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.ko.md)*
+
+## Code Overview
 
 ---
 
@@ -186,7 +198,7 @@ python train.py \
 
 ---
 
-## Summary
+## Solution Summary
 
 The ensembled results of the two-stage approach and the one-stage approach. The two-stage approach consists of 2-class classifier and 14-class detector. And the one-stage approach is 15-class detector.
 
@@ -210,7 +222,7 @@ The one-stage detector was trained using all images of normal and abnormal.
 
 The overlapped bboxes in both train set and validation set were fused using nms. I tested it using batched_nms of torchvision, nms and wbf of ZFTurbo.
 
-14-class Efficientdet d4 896px 30 epochs without classifier
+14-class Efficientdet d4 896px 30 epochs without classifier, local cv on positive image only
 ||cv(mAP@iou=0.4)|public LB|private LB|
 |-|-|-|-|
 |torchvision batched_nms|0.4317|0.155|0.168|
@@ -260,25 +272,25 @@ All models were trained on Colab Pro's V100 16GB single GPU.
 |b5|456|single|16|1.0e-4|1.0e-4|0.9557|0.9927|
 |b5|1024|single|4|2.5e-5|1.0e-4|0.9577|0.9936|
 
-- 14-class detector : EfficientDet, total 18 models
+- 14-class detector : EfficientDet with 2-class classifier, total 18 models, local cv on positive image only
 
-|model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|d3|1024|single|3|3e-4|1e-3|0.4545|
-|d4|896|5 of 5|4|4e-4|1e-4|0.4541|
-|d4|896|single|4|4e-4|1e-3|0.4606|
-|d4|1024|single|3|3e-4|1e-3|0.4545|
-|d5|768|5 of 5|4|4e-4|1e-3|0.4472|
-|d5|896|4 of 5|3|3e-4|1e-3|0.4522|
-|d5|1024|single|2|2e-4|1e-3|0.4462|
+|model|image size(px)|folds|batch size|init lr|weight decay|cv(mAP@iou=0.4)|public LB|private LB|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|d3|1024|single|3|3e-4|1e-3|0.4545|0.209|0.250|
+|d4|896|5 of 5|4|4e-4|1e-4|0.4541|0.218|0.250|
+|d4|896|single|4|4e-4|1e-3|0.4606|0.257|0.247|
+|d4|1024|single|3|3e-4|1e-3|0.4545|0.228|0.249|
+|d5|768|5 of 5|4|4e-4|1e-3|0.4472|0.225|0.253|
+|d5|896|4 of 5|3|3e-4|1e-3|0.4522|0.214|0.250|
+|d5|1024|single|2|2e-4|1e-3|0.4462|0.214|0.232|
 
 ### One-stage approach
 
-- 15-class detector, total 2 models
+- 15-class detector, total 2 models, local cv on positive image only
 
-|model|image size(px)|folds|batch size|init lr|weight decay|mAP|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|d4|896|2 of 5|4|4e-4|1e-3|0.4546|
+|model|image size(px)|folds|batch size|init lr|weight decay|cv(mAP@iou=0.4)|public LB|private LB|
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|d4|896|2 of 5|4|4e-4|1e-3|0.4546|0.230|0.246|
 
 At batch size < 4, the mAP result was poor. The larger the image size, the better the mAP, but no further training was possible.
 
