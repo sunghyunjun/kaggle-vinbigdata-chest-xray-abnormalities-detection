@@ -1,0 +1,14 @@
+albumentations==0.5.2
+effdet @ git+https://github.com/rwightman/efficientdet-pytorch.git
+ensemble-boxes==1.0.4
+map-boxes==1.0.5
+neptune-client==0.4.133
+numpy==1.19.5
+opencv-python==4.5.1.48
+pandas==1.2.0
+pytorch-lightning==1.2.4
+scikit-learn==0.24.1
+timm==0.4.5
+torch==1.7.1
+torchvision==0.8.2
+tqdm==4.56.0
