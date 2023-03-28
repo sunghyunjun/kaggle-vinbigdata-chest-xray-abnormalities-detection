@@ -1,6 +1,6 @@
 # kaggle-vinbigdata-chest-xray-abnormalities-detection
 
-Code for 91th place solution in [Kaggle VinBigData Chest X-ray Abnormalities Detection](https://www.kaggle.com/c/vinbigdata-chest-xray-abnormalities-detection).
+Code for 76th place solution in [Kaggle VinBigData Chest X-ray Abnormalities Detection](https://www.kaggle.com/c/vinbigdata-chest-xray-abnormalities-detection).
 
 - [Code Overview](https://github.com/sunghyunjun/kaggle-vinbigdata-chest-xray-abnormalities-detection/blob/main/README.md#code-overview)
 
